@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import sys, argparse 
-from kalman import KalmanFilter, IteratedMSKalmanFilter
+from kalman import KalmanFilter
 from renderer import VideoStream, FlowStream
 from distmesh_dyn import DistMesh
 
@@ -38,7 +38,7 @@ Ben Lansdell
 	parser = argparse.ArgumentParser()
 	parser.add_argument('fn_in', default='./video/johntest_brightcontrast_short.avi', 
 		help='input video file, any format readable by OpenCV', nargs = '?')
-	parser.add_argument('flow_in', default='./video/johntest_brightcontrast_short/flow', 
+	parser.add_argument('flow_in', default='./video/johntest_brightcontrast_short/', 
 		help='input optic flow path', nargs = '?')
 	parser.add_argument('fn_out', default='./video/johntest_brightcontrast_short_output.avi', 
 		help='avi output video file', nargs='?')
@@ -46,9 +46,9 @@ Ben Lansdell
 		help='name for saving run images', nargs='?')
 	parser.add_argument('-t', '--threshold', default=9,
 		help='threshold intensity below which is background', type = int)
-	parser.add_argument('-s', '--gridsize', default=22,
-		help='edge length for mesh (smaller is finer; unstable much further below 18)', type = int)
-	parser.add_argument('-c', '--cuda', default=True,
+	parser.add_argument('-s', '--gridsize', default=18,
+		help='edge length for mesh (smaller is finer)', type = int)
+	parser.add_argument('-c', '--cuda', default=False,
 		help='whether or not to do analysis on CUDA', type = bool)
 	args = parser.parse_args()
 
@@ -56,7 +56,6 @@ Ben Lansdell
 		print("No command line arguments provided, using defaults")
 	
 	capture = VideoStream(args.fn_in, args.threshold)
-
 	frame = capture.current_frame()
 	mask, ctrs, fd = capture.backsub()
 	distmesh = DistMesh(frame, h0 = args.gridsize)
@@ -64,15 +63,9 @@ Ben Lansdell
 	
 	#Load flow data from directory
 	flowstream = FlowStream(args.flow_in)
-	ret_flow, flowframe = flowstream.peek()
 
-	if ret_flow:
-		kf = IteratedMSKalmanFilter(distmesh, frame, flowframe, cuda = args.cuda, sparse = True, multi = True)
-	else:
-		print 'Cannot read flow stream'
-		return 
-
-	#kf.compute(capture.gray_frame(), flowframe)
+	kf = KalmanFilter(distmesh, frame, args.cuda)
+	kf.compute(capture.gray_frame(), flowframe)
 	nI = 3
 	count = 0
 	while(capture.isOpened()):
@@ -86,11 +79,11 @@ Ben Lansdell
 		#	print 'Iteration %d' % i 
 		#	raw_input("Finished. Press Enter to continue")
 		#	kf.compute(grayframe, flowframe)
-		kf.compute(grayframe, flowframe, mask, imageoutput = 'screenshots/' + args.name + '_frame_' + str(count))
+		kf.compute(grayframe, flowframe, mask, imageoutput = 'screenshots/' + name + '_frame_' + str(i))
 	capture.release()
 	output.release()
 	cv2.destroyAllWindows()
-	raw_input("Finished. Press ENTER to exit")
+	raw_input("Finished. Press enter to exit")
 
 if __name__ == "__main__":
 	sys.exit(main())
