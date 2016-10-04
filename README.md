@@ -18,6 +18,7 @@ Notes:
 * *Uses OpenGL rendering. If using remotely, you'll need to set up a VirtualGL server
 * **If have a CUDA compatible graphics card
 
+![alt tag](https://github.com/benlansdell/hydra-mfsf/blob/master/hydra_tracked.png)
 
 # References
 [1] Ravi Garg, Anastasios Roussos, Lourdes Agapito, "A Variational Approach to Video Registration with Subspace Constraints", International journal of computer vision 104 (3), 286-314, 2013 
