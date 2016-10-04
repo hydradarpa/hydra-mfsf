@@ -87,15 +87,19 @@ void main()
 """
 
 #Need to make this paint the colors of the faces
+	#Line removed from shader
+	#//uniform vec3 u_colors[%d];
 def frag_shader_mask(F):
 	FRAG_SHADER_MASK = """
 	#version 330 
-	uniform vec3 u_colors[%d];
+	uniform sampler1D texture1;
+	float nComp = %d;
 	out vec4 fragmentColor;
 	void main()
 	{
-		fragmentColor.rgb = u_colors[gl_PrimitiveID]/255;
-		fragmentColor.a = 1.0;
+		//fragmentColor.rgb = u_colors[gl_PrimitiveID]/255;
+		fragmentColor = texture(texture1, (gl_PrimitiveID+1)/(nComp+1));
+		//fragmentColor.a = 1.0;
 	}
 	""" % F
 	return FRAG_SHADER_MASK
@@ -181,6 +185,19 @@ void main() {
 }
 """
 
+def frag_shader_force(I):
+	FRAG_SHADER_FORCE = """
+	#version 330
+	uniform sampler1D texture1;
+	float nComp = %d;
+	out vec4 fragmentColor;
+	void main()
+	{
+		fragmentColor = texture(texture1, (gl_PrimitiveID+1)/(nComp+1));
+	}
+	""" % I
+	return FRAG_SHADER_FORCE
+
 def frag_shader_lines(I):
 	FRAG_SHADER_LINES = """
 	#version 330
@@ -189,7 +206,7 @@ def frag_shader_lines(I):
 	out vec4 fragmentColor;
 	void main()
 	{
-		fragmentColor = texture(texture1, (gl_PrimitiveID/3)/nComp);
+		fragmentColor = texture(texture1, (gl_PrimitiveID/3+1)/(nComp+1));
 	}
 	""" % I
 	return FRAG_SHADER_LINES
@@ -202,8 +219,8 @@ class Renderer(app.Canvas):
 		self.cuda = cuda
 		self.showtracking = showtracking 
 		self.force = force
-		self.fmin = -.5
-		self.fmax = .5
+		self.fmin = -40
+		self.fmax = 40
 		self.activeface = 0 
 		self.state = 'texture'
 		self.tri = distmesh.t 
@@ -213,10 +230,11 @@ class Renderer(app.Canvas):
 		title = 'Hydra tracker. Displaying %s state (space to toggle)' % self.state
 		size = (nx, nx)
 		app.Canvas.__init__(self, keys='interactive', title = title, show = showtracking, size=size, resizable=False)
-		self.indices_buffer, self.outline_buffer, self.vertex_data, self.quad_data, self.quad_buffer, self.l0 = self.loadMesh(distmesh.p, vel, distmesh.t, nx, labels, labels_hess)
+		self.indices_buffer, self.outline_buffer, self.vertex_data, self.vertex_data_inverse, self.quad_data, self.quad_buffer, self.l0 = self.loadMesh(distmesh.p, vel, distmesh.t, nx, labels, labels_hess)
 		self.l = self.l0.copy()
 
 		self._vbo = gloo.VertexBuffer(self.vertex_data)
+		self._vbo_inverse = gloo.VertexBuffer(self.vertex_data_inverse)
 		self._quad = gloo.VertexBuffer(self.quad_data)
 		self.current_frame = im1
 		self.current_texture = gloo.Texture2D(im1)
@@ -233,7 +251,11 @@ class Renderer(app.Canvas):
 		self._program.bind(self._vbo)
 		#self._program_lines = gloo.Program(VERT_SHADER, FRAG_SHADER_LINES)
 
-		self._program_lines = gloo.Program(VERT_SHADER, frag_shader_lines(self.I))
+		self._program_inverse = gloo.Program(VERT_SHADER, FRAG_SHADER)
+		self._program_inverse['texture1'] = self.init_texture
+		self._program_inverse.bind(self._vbo_inverse)
+
+		self._program_lines = gloo.Program(VERT_SHADER, frag_shader_force(self.I*3))
 		#for i in range(self.I):
 		#	self._program_lines[u'u_colors[%d]'%i] = tuple(self.linecolors[i,:])
 		self._program_lines['texture1'] = self.linecolors.astype(np.uint8)
@@ -249,8 +271,10 @@ class Renderer(app.Canvas):
 		self._program_flow.bind(self._vbo)
 		self._program_red = gloo.Program(VERT_SHADER, FRAG_SHADER_RED)
 		self._program_green = gloo.Program(VERT_SHADER, FRAG_SHADER_GREEN)
+
 		self._program_mask = gloo.Program(VERT_SHADER, frag_shader_mask(self.F))
-		self._program_mask['u_colors'] = np.squeeze(self.facecolors[:,:,0])
+		#self._program_mask['u_colors'] = np.squeeze(self.facecolors[:,:,0])
+		self._program_mask['texture1'] = np.squeeze(self.facecolors[:,:,0]).astype(np.uint8)
 		self._program_mask.bind(self._vbo)
 
 		self._program_outline = gloo.Program(VERT_SHADER, frag_shader_lines(self.I))
@@ -328,8 +352,9 @@ class Renderer(app.Canvas):
 		self.draw(event)
 
 	def _updatemaskpalette(self, colors):
-		for i in range(len(colors)):
-			self._program_mask['u_colors[%d]'%i] = colors[i,:]
+		self._program_mask['texture1'] = colors.astype(np.uint8)
+		#for i in range(len(colors)):
+		#	self._program_mask['u_colors[%d]'%i] = colors[i,:]
 
 	def _updatelinecolors(self, colors):
 		self._program_lines['texture1'] = colors.astype(np.uint8)
@@ -344,6 +369,8 @@ class Renderer(app.Canvas):
 	def draw(self, event):
 		#Turn on additive blending
 		gloo.set_state('additive')
+		gloo.set_state(cull_face = False)
+		gloo.set_cull_face('front')
 		gloo.clear()
 		#Summary render to main screen
 		if self.state == 'texture' or self.state == 'raw':
@@ -365,11 +392,20 @@ class Renderer(app.Canvas):
 			self._program_green.bind(self._vbo)
 			self._program_green['texture1'] = self.init_texture
 			self._program_green.draw('triangles', self.indices_buffer)
+		elif self.state == 'inverse':
+			#Load current frame as texture
+			self._program_inverse['texture1'] = self.current_texture
+			#Set UV coords of texture to current state coords
+			#self._vbo_inverse['asdf']
+			#Set coords of rendered object to initial state coords
+			self._program_inverse.bind(self._vbo_inverse)
+			self._program_inverse.draw('triangles', self.indices_buffer)
 		else:
 			self._program_outline.bind(self._vbo)
 			self._program_outline.draw('lines', self.outline_buffer)
 		#Draw wireframe, too
 		if self.state != 'raw' and self.state != 'outline':
+			gloo.set_state('opaque')
 			self._program_lines.draw('lines', self.outline_buffer)
 
 	def on_key_press(self, event):
@@ -384,6 +420,8 @@ class Renderer(app.Canvas):
 				self.state = 'mask'
 			elif self.state == 'mask':
 				self.state = 'outline'
+			elif self.state == 'outline':
+				self.state = 'inverse'
 			else:
 				self.state = 'flow'
 			self.title = 'Hydra tracker. Displaying %s state (space to toggle, q to quit).' % self.state
@@ -433,6 +471,14 @@ class Renderer(app.Canvas):
 			self.outlinecolors[idx,:] = o
 		self._updateoutlinecolors(self.outlinecolors)
 
+	def rendermask(self):
+		with self._fbo4:
+			gloo.clear()
+			self._program_mask.draw('triangles', self.indices_buffer)
+			pixels = gloo.read_pixels()
+		pixels = cv2.cvtColor(pixels, cv2.COLOR_BGRA2RGBA)
+		return pixels
+
 	def screenshot(self, saveall = False, basename = 'screenshot'):
 		with self._fbo2:
 			print 'saving flowx'
@@ -458,7 +504,7 @@ class Renderer(app.Canvas):
 			self._updatemaskpalette(np.squeeze(self.hessfacecolors[:,:,1]))
 			#change render mode, rerender, and save
 			#for state in ['flow', 'raw', 'overlay', 'texture']:
-			for state in ['raw', 'overlay', 'texture', 'mask']:
+			for state in ['raw', 'overlay', 'texture', 'mask', 'inverse']:
 				print 'saving', state
 				self.state = state
 				self._updatemaskpalette(np.squeeze(self.hessfacecolors[:,:,1]))
@@ -514,6 +560,10 @@ class Renderer(app.Canvas):
 		self.vertex_data['a_position'] = verdata
 		self.vertex_data['a_velocity'] = veldata 
 		self._vbo = gloo.VertexBuffer(self.vertex_data)
+
+		self.vertex_data_inverse['a_texcoord'] = vertices/self.nx
+		self._vbo_inverse = gloo.VertexBuffer(self.vertex_data_inverse)
+
 		self._program.bind(self._vbo)
 		self._program_lines.bind(self._vbo)
 		self._program_flowx.bind(self._vbo)
@@ -530,21 +580,21 @@ class Renderer(app.Canvas):
 				f = self.force(self.l[3*idx,0], self.l0[3*idx,0])
 				c = (f-self.fmin)/(self.fmax-self.fmin)
 				c = 255*min(max(c, 0), 1)
-				self.linecolors[3*idx,:] = [0, 0, c, 255]
+				self.linecolors[3*idx,:] = [0, 128, c, 255]
 				#Second edge
 				pt = vertices[t[1],:]-vertices[t[2],:]
 				self.l[3*idx+1,0] = np.linalg.norm(pt)
 				f = self.force(self.l[3*idx+1,0], self.l0[3*idx+1,0])
 				c = (f-self.fmin)/(self.fmax-self.fmin)
-				c = min(max(c, 0), 1)
-				self.linecolors[3*idx+1,:] = [0, 0, c, 255]
+				c = 255*min(max(c, 0), 1)
+				self.linecolors[3*idx+1,:] = [0, 128, c, 255]
 				#Third edge
 				pt = vertices[t[2],:]-vertices[t[0],:]
 				self.l[3*idx+2,0] = np.linalg.norm(pt)
 				f = self.force(self.l[3*idx+2,0], self.l0[3*idx+2,0])
 				c = (f-self.fmin)/(self.fmax-self.fmin)
-				c = min(max(c, 0), 1)
-				self.linecolors[3*idx+2,:] = [0, 0, c, 255]
+				c = 255*min(max(c, 0), 1)
+				self.linecolors[3*idx+2,:] = [0, 128, c, 255]
 	
 		#Update uniform data
 		self._updatelinecolors(self.linecolors)
@@ -566,6 +616,8 @@ class Renderer(app.Canvas):
 		self.nx = nx
 		vertex_data = np.zeros(self.nP, dtype=[('a_position', np.float32, 3),
 			('a_texcoord', np.float32, 2), ('a_velocity', np.float32, 3)])
+		vertex_data_inverse = np.zeros(self.nP, dtype=[('a_position', np.float32, 3),
+			('a_texcoord', np.float32, 2), ('a_velocity', np.float32, 3)])
 		verdata = np.zeros((self.nP,3))
 		veldata = np.zeros((self.nP,3))
 		uvdata = np.zeros((self.nP,2))
@@ -580,6 +632,9 @@ class Renderer(app.Canvas):
 		vertex_data['a_position'] = verdata
 		vertex_data['a_texcoord'] = uvdata 
 		vertex_data['a_velocity'] = veldata 
+		vertex_data_inverse['a_position'] = verdata
+		vertex_data_inverse['a_texcoord'] = uvdata 
+		vertex_data_inverse['a_velocity'] = veldata 
 		indices = triangles.reshape((1,-1)).astype(np.uint16)
 		indices_buffer = gloo.IndexBuffer(indices)
 	
@@ -607,29 +662,29 @@ class Renderer(app.Canvas):
 		self.outlinecolors = np.zeros((len(triangles),4))		
 
 		#Setup multiperturbation face colors
-		self.facecolors = 255*np.ones((len(self.tri), 3, labels.shape[1]+1), dtype=np.uint8)
+		self.facecolors = 255*np.ones((len(self.tri), 4, labels.shape[1]+1), dtype=np.uint8)
 		for i in range(labels.shape[1]):
 			for idx,t in enumerate(self.tri):
 				self.facecolors[idx, 1, i] = np.floor_divide(labels[idx,i], 256)
 				self.facecolors[idx, 2, i] = np.remainder(labels[idx,i], 256)
 
 		#Setup multiperturbation face colors, randomized for clearer visualization
-		randcolors = np.random.rand(len(vertices), 3)
-		self.randfacecolors = 255*np.ones((len(self.tri), 3, labels.shape[1]+1), dtype=np.uint8)
+		randcolors = np.random.rand(len(vertices), 4)
+		self.randfacecolors = 255*np.ones((len(self.tri), 4, labels.shape[1]+1), dtype=np.uint8)
 		for i in range(labels.shape[1]):
 			for idx,t in enumerate(self.tri):
 				self.randfacecolors[idx, :, i] = 255*randcolors[labels[idx,i],:]
 
 		#Setup multiperturbation face colors
-		self.hessfacecolors = 255*np.ones((len(self.tri), 3, labels_hess.shape[1]+1), dtype=np.uint8)
+		self.hessfacecolors = 255*np.ones((len(self.tri), 4, labels_hess.shape[1]+1), dtype=np.uint8)
 		for i in range(labels_hess.shape[1]):
 			for idx,t in enumerate(self.tri):
 				self.hessfacecolors[idx, 1, i] = np.floor_divide(labels_hess[idx,i], 256)
 				self.hessfacecolors[idx, 2, i] = np.remainder(labels_hess[idx,i], 256)
 
 		#Setup multiperturbation face colors
-		randcolors = np.random.rand(np.max(labels_hess)+1, 3)
-		self.randhessfacecolors = 255*np.ones((len(self.tri), 3, labels_hess.shape[1]+1), dtype=np.uint8)
+		randcolors = np.random.rand(np.max(labels_hess)+1, 4)
+		self.randhessfacecolors = 255*np.ones((len(self.tri), 4, labels_hess.shape[1]+1), dtype=np.uint8)
 		for i in range(labels_hess.shape[1]):
 			for idx,t in enumerate(self.tri):
 				self.randhessfacecolors[idx, :, i] = 255*randcolors[labels_hess[idx,i],:]
@@ -648,10 +703,10 @@ class Renderer(app.Canvas):
 		quad_data['a_texcoord'] = quad_coord 
 		quad_data['a_position'] = quad_ver 
 		quad_data['a_velocity'] = quad_vel 
-		quad_triangles = np.array([[0, 1, 2], [1, 2, 3]])
+		quad_triangles = np.array([[0, 2, 1], [2, 1, 3]])
 		quad_indices = quad_triangles.reshape((1,-1)).astype(np.uint16)
 		quad_buffer = gloo.IndexBuffer(quad_indices)
-		return indices_buffer, outline_buffer, vertex_data, quad_data, quad_buffer, l0
+		return indices_buffer, outline_buffer, vertex_data, vertex_data_inverse, quad_data, quad_buffer, l0
 
 	def update_frame(self, y_im, y_flow, y_m):
 		self.current_frame = y_im 
@@ -803,6 +858,12 @@ class VideoStream:
 
 	def isOpened(self):
 		return self.cap.isOpened()
+
+	def release(self):
+		return self.cap.release()
+
+	def seek(self, frameIndex):
+		self.cap.set(cv2.CAP_PROP_POS_FRAMES, frameIndex);
 
 class FlowStream:
 	def __init__(self, path):

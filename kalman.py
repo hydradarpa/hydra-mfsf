@@ -12,11 +12,14 @@ from renderer import Renderer
 from imgproc import findObjectThreshold
 
 import pdb
+import logging 
 import sys
 from time import gmtime, strftime
 from timeit import timeit 
 import time 
 from numpy.linalg import norm, inv 
+
+import matplotlib.pyplot as plt
 
 from useful import * 
 
@@ -104,10 +107,13 @@ def timer_counter(tc, inc):
 stats = Statistics()
 
 class KFState:
-	def __init__(self, distmesh, im, flow, cuda, eps_F = 1, eps_Z = 1e-3, eps_J = 1e-3, eps_M = 1e-3, vel = None, sparse = True, multi = True):
+	def __init__(self, distmesh, im, flow, cuda, eps_F = 1, eps_Z = 1e-3, eps_J = 1e-3, eps_M = 1e-3, vel = None, sparse = True, multi = True, alpha = 0.3):
 
 		self.multi = multi 
+		self.alpha = alpha
+
 		print 'multiperturbation rendering:', multi 
+		print 'edge length adaptation rate:', alpha
 		#Set up initial geometry parameters and covariance matrices
 		self._ver = np.array(distmesh.p, np.float32)
 		#self._vel = np.zeros(self._ver.shape, np.float32)
@@ -153,7 +159,7 @@ class KFState:
 		self.sineface = np.zeros(len(a))
 		for i in range(len(a)):
 			self.sineface[i] = np.cross(a[i,:],b[i,:])/(np.linalg.norm(a[i,:])*np.linalg.norm(b[i,:]))
-		nz = abs(self.sineface) > 0.06
+		nz = abs(self.sineface) > 0.3
 		print 'Removing %d faces for being too flat' % np.sum(nz == 0)
 		self.sineface = self.sineface[nz]
 		self.ori = self.ori[nz]
@@ -435,6 +441,7 @@ class KFState:
 	#@timer_counter(stats.stateupdatecount, stats.stateupdatetime)
 	@timer_counter(stats.stateupdatetc, [1])
 	def update(self, y_im, y_flow, y_m):
+		logging.debug("----KFState update")
 		if self.multi:
 			(Hz, Hz_components) = self._jacobian_multi(y_im, y_flow, y_m)
 		else:
@@ -450,18 +457,22 @@ class KFState:
 
 	@timer_counter(stats.jacobianrenderstc, stats.jacinc)
 	def _jacobian_multi(self, y_im, y_flow, y_m, deltaX = 2):
+		logging.debug("------KFState multi jacobian")
 		Hz = np.zeros((self.size(),1))
 		Hz_components = np.zeros((self.size(),4))
 
 		#Perturb groups of vertices
 		#This loop is ~32 renders, instead of ~280, for hydra1 synthetic mesh of 35 nodes
 		for idx, e in enumerate(self.E):
+			logging.debug("--------Perturbing partition %d"%idx)
 			self.refresh(idx) 
 			self.render()
 			#Set reference image to unperturbed images
+			logging.debug("--------initjacobian")
 			self.renderer.initjacobian(y_im, y_flow, y_m)
 			for i in range(2):
 				for j in range(2):
+					logging.debug("--------Rendering perturbation")
 					offset = i+2*self.N*j 
 					#print e 
 					ee = offset + 2*np.array(e, dtype=np.int)
@@ -484,11 +495,13 @@ class KFState:
 					Hz[ee,0] = Hz[ee,0]/2
 					Hz_components[ee,:] = Hz_components[ee,:]/2
 
+		logging.debug("------Finished")
 		self.refresh() 
 		self.render()
 		return (Hz, Hz_components)
 
 	def _jacobian(self, y_im, y_flow, y_m, deltaX = 2):
+		logging.debug("------KFState single jacobian")
 		Hz = np.zeros((self.size(),1))
 		Hz_components = np.zeros((self.size(),4))
 		self.refresh() 
@@ -519,6 +532,7 @@ class KFState:
 
 	@timer_counter(stats.hessianrenderstc, stats.hessinc)
 	def _hessian(self, y_im, y_flow, y_m, deltaX = 2):
+		logging.debug("------KFState single dense Hessian")
 		HTH = np.zeros((self.size(),self.size()))
 		self.refresh() 
 		self.render()
@@ -537,13 +551,16 @@ class KFState:
 
 	@timer_counter(stats.hessianrenderstc, stats.hessincsparse)
 	def _hessian_sparse_multi(self, y_im, y_flow, y_m, deltaX = 2):
+		logging.debug("------KFState multi sparse Hessian")
 		HTH = np.zeros((self.size(),self.size()))
 		HTH_c = np.zeros((4, self.size(), self.size()))
 
 		for idx, e in enumerate(self.E_hessian):
+			logging.debug("-------- Perturbing partition %d"%idx)
 			self.refresh(idx, hess = True) 
 			self.render()
 			#Set reference image to unperturbed images
+			logging.debug("-------- initjacobian")
 			self.renderer.initjacobian(y_im, y_flow, y_m)
 			ee = e.copy()
 			eeidx = self.E_hessian_idx[idx]
@@ -552,6 +569,7 @@ class KFState:
 				for j1 in range(2):
 					for i2 in range(2):
 						for j2 in range(2):
+							logging.debug("-------- Rendering")
 							offset1 = i1+2*self.N*j1 
 							offset2 = i2+2*self.N*j2 
 							ee[:,0] = 2*e[:,0] + offset1 
@@ -576,11 +594,13 @@ class KFState:
 								HTH_c[3,q1,q2] = hcomp[idx2,3]/deltaX/deltaX
 								HTH_c[3,q2,q1] = HTH_c[3,q1,q2]
 
+		logging.debug("------Finished")
 		self.refresh() 
 		self.render()
 		return HTH
 
 	def _hessian_sparse(self, y_im, y_flow, y_m, deltaX = 2):
+		logging.debug("------KFState single sparse Hessian")
 		HTH = np.zeros((self.size(),self.size()))
 		self.refresh() 
 		self.render()
@@ -624,19 +644,23 @@ class KFState:
 		self.renderer.force = f 
 
 class KalmanFilter:
-	def __init__(self, distmesh, im, flow, cuda, vel = None, sparse = True, multi = True, eps_F = 1, eps_Z = 1e-3, eps_J = 1e-3, eps_M = 1e-3):
+	def __init__(self, distmesh, im, flow, cuda, vel = None, sparse = True, multi = True, eps_F = 1, eps_Z = 1e-3, eps_J = 1e-3, eps_M = 1e-3, alpha = 0.3):
 		self.distmesh = distmesh
 		self.N = distmesh.size()
 		print 'Creating filter with ' + str(self.N) + ' nodes'
-		self.state = KFState(distmesh, im, flow, cuda, vel=vel, sparse = sparse, multi = multi, eps_F = eps_F, eps_Z = eps_Z, eps_J = eps_J, eps_M = eps_M)
+		self.state = KFState(distmesh, im, flow, cuda, vel=vel, sparse = sparse, multi = multi, eps_F = eps_F, eps_Z = eps_Z, eps_J = eps_J, eps_M = eps_M, alpha = alpha)
 		self.predtime = 0
 		self.updatetime = 0
+		self.adapttime = 0
 
 	def __del__(self):
 		self.state.__del__()
 
+	def save(self, fn_out):
+		return 
+
 	def plotforces(self, overlay, imageoutput):
-		sc = 2
+		sc = 10
 		#Get original pt locations
 		ox = self.orig_x[0:(2*self.N)].reshape((-1,2))
 		#Get prediction location
@@ -662,7 +686,7 @@ class KalmanFilter:
 
 		font = cv2.FONT_HERSHEY_SIMPLEX
 		#cv2.putText(img,'Hello World!',(10,500), font, 1,(255,255,255),2)
-		legendtext = 'red = mask force\ngreen = flow force\nblue = template force\nwhite = prediction'
+		legendtext = 'red = mask force\ngreen = flow force\nblue = template force\nwhite = prediction\nscale factor = %d'%sc
 		x0, y0 = (20,20)
 		dy = 20
 		for i, line in enumerate(legendtext.split('\n')):
@@ -674,6 +698,8 @@ class KalmanFilter:
 		cv2.imwrite(fn, overlay)
 
 	def compute(self, y_im, y_flow, y_m, maskflow = True, imageoutput = None):
+
+		logging.info("Computing frame")
 		self.state.renderer.update_frame(y_im, y_flow, y_m)
 		#Mask optic flow frame by contour of y_im
 		if maskflow is True:
@@ -685,13 +711,20 @@ class KalmanFilter:
 		pt = timeit(self.predict, number = 1)
 		jt = timeit(lambda: self.projectmask(y_m), number = 1)
 		ut = timeit(lambda: self.update(y_im, y_flow_mask, y_m), number = 1)
+		at = timeit(self.adaptlength, number = 1)
+		logging.info("Finished computing frame")
 		self.predtime += pt
 		self.updatetime += ut
+		self.adapttime += at 
 
 		print 'Current state:', self.state.X.T
 		print 'Prediction time:', pt 
 		print 'Projection time:', jt 
 		print 'Update time: ', ut 
+		print 'Length adjustment time:', at
+
+		#Update history of tracking
+
 		#Save state of each frame
 		if imageoutput is not None:
 			overlay = self.state.renderer.screenshot(saveall=True, basename = imageoutput)
@@ -699,9 +732,26 @@ class KalmanFilter:
 			self.plotforces(overlay, imageoutput)
 		return self.error(y_im, y_flow, y_m)
 
+	def adaptlength(self):
+		#Adjust length of edges based on how stretched they currently are
+		#and an 'adjustment' rate alpha
+
+		minlength = 5
+		logging.info("--Adapt lengths")
+		l = self.state.lengths()
+		l0 = self.state.l0
+		alpha = self.state.alpha
+		l0 += (l-l0)*alpha
+
+		l0[l0 < minlength] = minlength
+
+		self.state.l0 = l0
+
+
 	@timer(stats.statepredtime)
 	def predict(self):
 		print '-- predicting'
+		logging.info("--KF prediction")
 		#import rpdb2 
 		#rpdb2.start_embedded_debugger("asdf")
 
@@ -723,29 +773,86 @@ class KalmanFilter:
 
 	def projectmask(self, y_m):
 		print '-- projecting outliers onto contour'
+		logging.info("--KF projection")
 		#Project vertices onto boundary 
 		ddeps = 1e-1
 		(mask2, ctrs, fd) = findObjectThreshold(y_m, threshold = 0.5)
 		p = self.state.vertices()
 		p_orig = p.copy()
-		d = fd(p)
-		ix = d>1
+
+		#Find vertices outside of mask and project these onto contour
 		for idx in range(10):
+			d = fd(p)
+			ix = d > 1
 			if ix.any():
-				dgradx = (fd(p[ix]+[ddeps,0])-d[ix])/ddeps # Numerical
-				dgrady = (fd(p[ix]+[0,ddeps])-d[ix])/ddeps # gradient
+				#First order differencing
+				#dgradx = (fd(p[ix]+[ddeps,0])-d[ix])/(ddeps) # Numerical
+				#dgrady = (fd(p[ix]+[0,ddeps])-d[ix])/(ddeps) # gradient
+				#Central differencing
+				dgradx = (fd(p[ix]+[ddeps,0])-fd(p[ix]-[ddeps,0]))/(2*ddeps) # Numerical
+				dgrady = (fd(p[ix]+[0,ddeps])-fd(p[ix]-[0,ddeps]))/(2*ddeps) # gradient
+				
 				dgrad2 = dgradx**2 + dgrady**2
 				p[ix] -= (d[ix]*np.vstack((dgradx, dgrady))/dgrad2).T # Project
+
+		#Find _outer_ vertices inside of mask and project these onto contour
+		#Get rendered mask
+
+		rend_mask = self.state.renderer.rendermask()[:,:,2]
+		#rend_mask = np.flipud(rend_mask)
+
+		#For each vertex, find if its on the border of the mask... 
+		border = np.zeros(self.N, dtype = bool)
+		for idx, pi in enumerate(p):
+			pii = pi.astype(int)
+			i = np.zeros(8, dtype = bool)
+			i[0] = rend_mask[pii[0,1]+2, pii[0,0]+2]
+			i[1] = rend_mask[pii[0,1]+2, pii[0,0]-2]
+			i[2] = rend_mask[pii[0,1]-2, pii[0,0]+2]
+			i[3] = rend_mask[pii[0,1]-2, pii[0,0]-2]
+			i[4] = rend_mask[pii[0,1],   pii[0,0]+2]
+			i[5] = rend_mask[pii[0,1],   pii[0,0]-2]
+			i[6] = rend_mask[pii[0,1]+2, pii[0,0]]
+			i[7] = rend_mask[pii[0,1]-2, pii[0,0]]
+			if (np.sum(i) < 8) and (np.sum(i) > 0):
+				border[idx] = 1
+
+		#Plot the mask...
+		#prend_mask = rend_mask.copy()
+		#for pi in p:
+		#	pii = pi.astype(int)
+		#	prend_mask[pii[0,1],   pii[0,0]] = 300
+		#	prend_mask[pii[0,1]+1, pii[0,0]] = 300
+		#	prend_mask[pii[0,1],   pii[0,0]+1] = 300
+		#	prend_mask[pii[0,1]+1, pii[0,0]+1] = 300
+		#plt.imshow(prend_mask)
+		#plt.colorbar()
+		#plt.show()
+
+		d = fd(p)
+		ix = (d < -1) * border 
+		for idx in range(1):
+			if ix.any():
+				#First order differencing
+				#dgradx = (fd(p[ix]+[ddeps,0])-d[ix])/(ddeps) # Numerical
+				#dgrady = (fd(p[ix]+[0,ddeps])-d[ix])/(ddeps) # gradient
+				#Central differencing
+				dgradx = (fd(p[ix]+[ddeps,0])-fd(p[ix]-[ddeps,0]))/(2*ddeps) # Numerical
+				dgrady = (fd(p[ix]+[0,ddeps])-fd(p[ix]-[0,ddeps]))/(2*ddeps) # gradient
+				dgrad2 = dgradx**2 + dgrady**2
+				p[ix] -= (d[ix]*np.vstack((dgradx, dgrady))/dgrad2).T # Project
+
+		#Write changes
 		self.state.X[0:(2*self.N)] = np.reshape(p, (-1,1))
 
 		#Update velocities also... or else it might crash...
 		self.state.X[(2*self.N):] += np.reshape(p - p_orig, (-1,1))
 
-
 	def update(self, y_im, y_flow, y_m):
 		#import rpdb2 
 		#rpdb2.start_embedded_debugger("asdf")
 		print '-- updating'
+		logging.info("--KF update")
 		X = self.state.X
 		W = self.state.W
 		#eps_Z = self.state.eps_Z
@@ -766,8 +873,8 @@ class KalmanFilter:
 
 class IteratedKalmanFilter(KalmanFilter):
 	#def __init__(self, distmesh, im, flow, cuda, sparse = True, nI = 10, eps_F = 1, eps_Z = 1e-3, eps_J = 1e-3, eps_M = 1e-3):
-	def __init__(self, distmesh, im, flow, cuda, sparse = True, multi = True, nI = 10, eps_F = 1e-3, eps_Z = 1e-3, eps_J = 1e-3, eps_M = 1e10):
-		KalmanFilter.__init__(self, distmesh, im, flow, cuda, sparse = sparse, multi = multi, eps_F = eps_F, eps_Z = eps_Z, eps_J = eps_J, eps_M = eps_M)
+	def __init__(self, distmesh, im, flow, cuda, sparse = True, multi = True, nI = 10, eps_F = 1e-3, eps_Z = 1e-3, eps_J = 1e-3, eps_M = 1e10, alpha = 0.3):
+		KalmanFilter.__init__(self, distmesh, im, flow, cuda, sparse = sparse, multi = multi, eps_F = eps_F, eps_Z = eps_Z, eps_J = eps_J, eps_M = eps_M, alpha = alpha)
 		self.nI = nI
 		self.reltol = 1e-4
 
@@ -776,6 +883,7 @@ class IteratedKalmanFilter(KalmanFilter):
 		#rpdb2.start_embedded_debugger("asdf")
 		#np.set_printoptions(threshold = 'nan', linewidth = 150, precision = 1)
 		print '-- updating'
+		logging.info("--KF update")
 		X = self.state.X
 		X_orig = X.copy()
 		X_old = X.copy()
@@ -832,9 +940,9 @@ class IteratedKalmanFilter(KalmanFilter):
 
 #Iterated mass-spring Kalman filter
 class IteratedMSKalmanFilter(IteratedKalmanFilter):
-	def __init__(self, distmesh, im, flow, cuda, sparse = True, multi = True, nI = 10, eps_F = 1e-1, eps_Z = 1e-3, eps_J = 1, eps_M = 1):
+	def __init__(self, distmesh, im, flow, cuda, sparse = True, multi = True, nI = 10, eps_F = 1e-1, eps_Z = 1e-3, eps_J = 1, eps_M = 1, alpha = 0.3):
 		#def __init__(self, distmesh, im, flow, cuda, sparse = True, nI = 10, eps_F = 1, eps_Z = 1e-3, eps_J = 1e-3, eps_M = 10):
-		IteratedKalmanFilter.__init__(self, distmesh, im, flow, cuda, sparse = sparse, multi = multi, eps_F = eps_F, eps_Z = eps_Z, eps_J = eps_J, eps_M = eps_M, nI = nI)
+		IteratedKalmanFilter.__init__(self, distmesh, im, flow, cuda, sparse = sparse, multi = multi, eps_F = eps_F, eps_Z = eps_Z, eps_J = eps_J, eps_M = eps_M, nI = nI, alpha = alpha)
 		#Mass of vertices
 		self.M = 1
 		#Spring stiffness

@@ -1,4 +1,6 @@
 *.pyc
+*.log
+*.pkl
 *.npz
 *.npy
 *.txt
