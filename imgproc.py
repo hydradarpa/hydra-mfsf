@@ -200,6 +200,8 @@ def findObjectThreshold(img, threshold = 7):
 		frame_gray = img 
 
 	frame_gray = cv2.blur(frame_gray, (5,5))
+	frame_gray = cv2.blur(frame_gray, (5,5))
+	frame_gray = cv2.blur(frame_gray, (5,5))
 
 	#Global threshold
 	ret1, mask = cv2.threshold(frame_gray, threshold, 255, cv2.THRESH_TOZERO)

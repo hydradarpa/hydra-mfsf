@@ -8,15 +8,13 @@ from scipy.io import loadmat
 import cv2 
 import numpy as np 
 
-fn_in='./video/20160412/stk_0001.avi'
-fn_in2='./video/20160412/stk_0001a.avi'
-flow_in='./video/20160412/stk_0001_flow/flow'
-name='stack0001'
-threshold = 42
+fn_in='../hydra/video/20160412/stk_0002.avi'
+name='stack0002'
+threshold = 46
 cuda = True
 gridsize = 25
 
-mfsf_in = './mfsf_results/stk_0001_mfsf_nref100/'
+mfsf_in = './mfsf_output/stack0002_nref100/'
 dm_out = 'init_mesh.pkl'
 
 imageoutput = mfsf_in + '/mesh/'
@@ -51,8 +49,8 @@ for idx in range(nF):
 	vid[:,:,idx] = grayframe 
 	masks[:,:,idx] = mask
 
-#distmesh = DistMesh(frame, h0 = gridsize)
-#distmesh.createMesh(ctrs, fd, frame, plot = True)
+#distmesh = DistMesh(refframe, h0 = gridsize)
+#distmesh.createMesh(ctrs, fd, refframe, plot = True)
 #Save this distmesh and reload it for quicker testing
 #distmesh.save(mfsf_in + dm_out)
 

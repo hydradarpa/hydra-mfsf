@@ -24,8 +24,8 @@ notes = 'masked_iekf_multi'
 #img_in = './screenshots/johntest_brightcontrast_short_lengthadapt_frame/'
 #vid_out = './testruns/lengthadapt4_johntest_short/'
 
-img_in = './mfsf_results/stk_0001_mfsf_nref100/mesh/'
-vid_out = './mfsf_results/stk_0001_mfsf_nref100/mesh_overlay/'
+img_in = './mfsf_output/stack0002_nref100/mesh/'
+vid_out = './mfsf_output/stack0002_nref100/mesh_overlay/'
 
 #Make video directory
 if not os.path.isdir(vid_out):
