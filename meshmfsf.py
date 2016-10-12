@@ -8,13 +8,13 @@ from scipy.io import loadmat
 import cv2 
 import numpy as np 
 
-fn_in='../hydra/video/20160412/stk_0002.avi'
-name='stack0002'
-threshold = 46
+fn_in='../hydra/video/20160412/stk_0003.avi'
+name='stack0003'
+threshold = 15
 cuda = True
 gridsize = 25
 
-mfsf_in = './mfsf_output/stack0002_nref100/'
+mfsf_in = './mfsf_output/stack0003_nref100/'
 dm_out = 'init_mesh.pkl'
 
 imageoutput = mfsf_in + '/mesh/'
@@ -89,3 +89,16 @@ for idx in range(nF):
 	kf.state.refresh()
 	kf.state.render()
 	kf.state.renderer.screenshot(saveall=True, basename = imageoutput + '_frame_%03d' % idx)
+
+
+#Make a video
+print 'Making movie'
+overlayoutput = mfsf_in + '/mesh_overlay/'
+if not os.path.exists(overlayoutput):
+    os.makedirs(overlayoutput)
+
+for idx in range(nF):
+	os.system('cp ' + imageoutput + '_frame_*overlay* ' + overlayoutput)
+
+avconv = 'avconv -framerate 5 -i ' + overlayoutput + 'overlay_%03d.png -c:v huffyuv -y'
+os.system(avconv + ' ' + overlayoutput + 'output.avi')
