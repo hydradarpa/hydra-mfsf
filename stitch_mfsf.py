@@ -1,12 +1,14 @@
 #!/usr/bin/env python
-import sys, argparse 
-from kalman import KalmanFilter
-from renderer import VideoStream, FlowStream
-from distmesh_dyn import DistMesh
+import sys 
+import argparse 
+from stitcher import Stitcher
+from scipy.io import loadmat, savemat 
+import numpy as np 
 
-import logging
+from matplotlib import pyplot as plt
 
-import pdb 
+from vispy import gloo
+from vispy import app
 
 def main():
 	usage = """stitch_mfsf.py [output_matfile] [input_matfile 1] [input_matfile 2] <input_matfile 3> ...
@@ -30,54 +32,63 @@ Ben Lansdell
 	parser.add_argument('flow_in', help='input mat files from MFSF', nargs = '+')
 	args = parser.parse_args()
 
+	#Test code
+	class Args:
+		pass 
+	args = Args()
+	args.fn_out = './test_stitch.mat'
+	args.flow_in = ['./mfsf_output/stack0001_nref100_nframe250/result.mat',\
+					'./mfsf_output/stack0002_nref100_nframe250/result.mat']
+
 	nV = len(args.flow_in)
-	if nV < 2:
+	if nV != 2:
 		print("Specify more than 1 MFSF results file")
-		return 
+		#return 
 
 	nref = np.zeros(nV)
 	nF = np.zeros(nV)
-	nx = 0
 
 	#Load first video and find last frame's coordinates
-	a = loadmat(args.flow_in[v])
+	a = loadmat(args.flow_in[0])
 	params = a['parmsOF']
-	u = a['u']
-	v = a['v']
-	nF[0] = u.shape[2]	
-	nx = u.shape[0]
-	ny = u.shape[1]
+	u0 = a['u']
+	v0 = a['v']
+	info = a['info']
+	nF[0] = u0.shape[2]	
+	nx = u0.shape[0]
+	ny = u0.shape[1]
 
-	#Quite large....
-	shiftu = np.zeros((nx, ny, total_frames))
-	shiftv = np.zeros((nx, ny, total_frames))
-	shiftu[:,:,0:nF[0]] = u
-	shiftv[:,:,0:nF[0]] = v
-	offsetu_last = u[:,:,nF[0]]
-	offsetv_last = v[:,:,nF[0]]
-	frame_count = nF[0]
-
-	#Load subsequent videos, offset these by last video's last frame
-	#Take note of current video's last frame coordinates
+	#Load remained of MFSF data to get total frames
 	for vidx in range(1,nV):
+		a = loadmat(args.flow_in[vidx])	
+		nF[vidx] = a['u'].shape[2]	
+
+	#Initialize data
+	us = np.zeros((nx, ny, np.sum(nF)))
+	vs = np.zeros((nx, ny, np.sum(nF)))
+	us[:,:,0:nF[0]] = u0
+	vs[:,:,0:nF[0]] = v0
+
+	#Load in optic flow data
+	for vidx in range(1,nV):
+		#vidx = 1
 		#Load MFSF data
-		a = loadmat(args.flow_in[vidx])
-	
+		a = loadmat(args.flow_in[vidx])	
 		params = a['parmsOF']
-		u = a['u']
-		v = a['v']
-		nF[vidx] = u.shape[2]	
+		u1 = a['u']
+		v1 = a['v']
+		#Make a Stitcher
+		thestitch = Stitcher(u1, v1)
 
-		offsetu_first = u[:,:,0]
-		offsetv_first = v[:,:,0]
+		self = thestitch
+		(u, v) = thestitch.run(u0, v0)
 
-		shiftu[:,:,frame_count:(frame_count+nF[vidx])] = u - offsetu_first + offsetu_last
-		shiftv[:,:,frame_count:(frame_count+nF[vidx])] = v - offsetv_first + offsetv_last
-
-		offsetu_last = u[:,:,-1]
-		offsetv_last = v[:,:,-1]
+		us[:,:,np.sum(nF[0:vidx]):np.sum(nF[0:vidx+1])] = u
+		vs[:,:,np.sum(nF[0:vidx]):np.sum(nF[0:vidx+1])] = v
 
 	#Save output matrix
+	mdict = {'u':us, 'v':vs, 'parmsOF':params, 'info':info}
+	savemat(args.fn_out, mdict)
 		
 if __name__ == "__main__":
 	sys.exit(main())
