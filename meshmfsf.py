@@ -8,13 +8,14 @@ from scipy.io import loadmat
 import cv2 
 import numpy as np 
 
-fn_in='../hydra/video/20160412/stk_0003.avi'
-name='stack0003'
+fn_in='../hydra/video/johntest_brightcontrast_short_jpg.avi'
+name='johntest_brightcontrast_short'
 threshold = 15
 cuda = True
 gridsize = 25
 
-mfsf_in = './mfsf_output/stack0003_nref100/'
+#mfsf_in = './mfsf_output/stk_0001_mfsf_nref100/'
+mfsf_in = './mfsf_output/johntest_flag_STD_0_alpha_20_nref100/'
 dm_out = 'init_mesh.pkl'
 
 imageoutput = mfsf_in + '/mesh/'
@@ -98,7 +99,7 @@ if not os.path.exists(overlayoutput):
     os.makedirs(overlayoutput)
 
 for idx in range(nF):
-	os.system('cp ' + imageoutput + '_frame_*overlay* ' + overlayoutput)
+	os.system('cp ' + imageoutput + '_frame_%03d_overlay* '%idx + overlayoutput+'frame_%03d.png'%idx)
 
-avconv = 'avconv -framerate 5 -i ' + overlayoutput + 'overlay_%03d.png -c:v huffyuv -y'
+avconv = 'avconv -framerate 5 -i ' + overlayoutput + 'frame_%03d.png -c:v huffyuv -y'
 os.system(avconv + ' ' + overlayoutput + 'output.avi')

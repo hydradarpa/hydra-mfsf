@@ -2,7 +2,8 @@ function run_mfsf(path_in, name, nref, nframe)
 
 	path_res = ['./mfsf_output/' name]; 
 	[u,v,parmsOF,info] = runMFSF('path_in',path_in,'frname_frmt','frame_%03d.tif',...
-	 'nref', nref, 'sframe', 1, 'nframe', nframe, 'MaxPIXpyr', 20000);
+	 'nref', nref, 'sframe', 1, 'nframe', nframe, 'STDfl', 0, 'MaxPIXpyr', 20000, 'alpha', 20,...
+	 'flag_grad', 1);
 	
 	% Save the result:
 	mkdir(path_res);
@@ -13,3 +14,5 @@ function run_mfsf(path_in, name, nref, nframe)
 	    'file_mask_grid','in_test/mask_f89.png');
 	fprintf('\nRuntime of MFSF algorithm: %g sec (%g sec per frame)\nRuntime of visualisation code: %g sec\n', ...
 	    info.runtime,info.runtime/parmsOF.nframe,toc);
+
+end
