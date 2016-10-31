@@ -1,6 +1,7 @@
 *.pyc
 *.log
 *.pkl
+*.glue
 *.npz
 *.npy
 *.txt

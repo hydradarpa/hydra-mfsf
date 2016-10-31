@@ -15,7 +15,8 @@ cuda = True
 gridsize = 25
 
 #mfsf_in = './mfsf_output/stk_0001_mfsf_nref100/'
-mfsf_in = './mfsf_output/johntest_flag_STD_0_alpha_20_nref100/'
+#mfsf_in = './mfsf_output/johntest_flag_STD_0_alpha_20_flag_grad_1_nref100/'
+mfsf_in = './mfsf_output/johntest_nref190/'
 dm_out = 'init_mesh.pkl'
 
 imageoutput = mfsf_in + '/mesh/'
@@ -103,3 +104,5 @@ for idx in range(nF):
 
 avconv = 'avconv -framerate 5 -i ' + overlayoutput + 'frame_%03d.png -c:v huffyuv -y'
 os.system(avconv + ' ' + overlayoutput + 'output.avi')
+
+avconv -i frame_%03d.png -c:v huffyuv output.avi
