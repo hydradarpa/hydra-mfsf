@@ -51,7 +51,8 @@ Ben Lansdell
 		os.makedirs(args.dir_out + 'refframes')
 	if not os.path.isdir(args.dir_out + 'corrmatrix'):
 		os.makedirs(args.dir_out + 'corrmatrix')
-	
+	if not os.path.isdir(args.dir_out + 'mfsf'):
+		os.makedirs(args.dir_out + 'mfsf')
 	#Use convert to extract frames
 
 	# to open a tiff file for reading:
@@ -73,11 +74,11 @@ Ben Lansdell
 
 	#Run DeepMatching
 	for i in range(nF):
-		im1 = args.dir_out + 'refframes/frame_%04d.tif'%args.ref_frames[i]
+		im1 = args.dir_out + 'refframes/frame_%04d.png'%args.ref_frames[i]
 		for j in range(nF):
 			if i != j:
 				print("DeepMatching between frame %d and %d" %(args.ref_frames[i], args.ref_frames[j]))
-				im2 = args.dir_out + 'refframes/frame_%04d.tif'%args.ref_frames[j]
+				im2 = args.dir_out + 'refframes/frame_%04d.png'%args.ref_frames[j]
 				fn_out = args.dir_out + 'corrmatrix/%04d_%04d.txt'%(args.ref_frames[i],args.ref_frames[j])
 				os.system('python %s %s %s -out %s' %(DM, im1, im2, fn_out)) 
 
@@ -91,9 +92,20 @@ Ben Lansdell
 				fn_out = args.dir_out + 'corrmatrix/%04d_%04d.flo'%(args.ref_frames[i],args.ref_frames[j])
 				matches = args.dir_out + 'corrmatrix/%04d_%04d.txt'%(args.ref_frames[i],args.ref_frames[j])
 				os.system(DF + ' %s %s %s -match %s' %(im1, im2, fn_out, matches)) 
-				fn_out = args.dir_out + 'corrmatrix/%04d_%04d.flo'%(args.ref_frames[j],args.ref_frames[i])
-				matches = args.dir_out + 'corrmatrix/%04d_%04d.txt'%(args.ref_frames[j],args.ref_frames[i])
-				os.system(DF + ' %s %s %s -match %s' %(im2, im1, fn_out, matches)) 
+
+	#Run MFSF
+	for idx,ref in enumerate(args.ref_frames):
+		if idx == 0:
+			start = 0
+		else:
+			start = args.ref_frames[idx-1]
+		if idx < nF:
+			end = args.ref_frames[idx+1]
+		else:
+			end = nframes
+		#Call MFSF matlab script...
+		call = 'matlab /r "startup; run_mfsf(2)"'
+		os.system(call)
 
 if __name__ == "__main__":
 	sys.exit(main())

@@ -42,6 +42,7 @@ Ben Lansdell
 	nF = len(refframes)
 
 	threshold = 4
+	radius = 6
 
 	#Load DeepFlow results
 	for r1 in refframes:
@@ -121,7 +122,7 @@ Ben Lansdell
 				#cv2.imshow('f',dst2)
 
 				#Overlay with reference frame...
-				im_fwderr = cv2.normalize(fwderr, im_fwderr, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+				im_fwderr = cv2.normalize(fwderr, fwderr, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
 				im_fwderr = cv2.cvtColor(im_fwderr, cv2.COLOR_GRAY2BGR)
 				im_fwderr = cv2.applyColorMap(im_fwderr, cv2.COLORMAP_JET)
 				dst = cv2.addWeighted(rf1,0.7,im_fwderr,0.3,0)
@@ -139,8 +140,8 @@ Ben Lansdell
 				#and vice versa
 				#Can use CV's remap function
 
-				rf1_recon = cv2.remap(rf2, flow1[:,:,0], flow1[:,:,1], cv2.INTER_LINEAR)
-				rf2_recon = cv2.remap(rf1, flow2[:,:,0], flow2[:,:,1], cv2.INTER_LINEAR)
+				rf1_recon = cv2.remap(rf2, fwdmeshx + flow1[:,:,0], fwdmeshy + flow1[:,:,1], cv2.INTER_LINEAR)
+				rf2_recon = cv2.remap(rf1, revmeshx + flow2[:,:,0], revmeshy + flow2[:,:,1], cv2.INTER_LINEAR)
 
 				#Compare these reconstructions to the original frames....
 				vis1 = np.concatenate((rf1, rf1_recon), axis = 1)
@@ -148,14 +149,28 @@ Ben Lansdell
 				vis = np.concatenate((vis1, vis2), axis = 0)
 				cv2.imshow('Recon', vis)
 
+				cv2.imwrite('./test.png', vis)
+
 				#Run local comparisons within a window...
 				sim1 = np.zeros((nx,ny))
 				sim2 = np.zeros((nx,ny))
-				for i in range(nx):
-					for j in range(ny):
+				for i in range(radius, nx-radius):
+					for j in range(radius, ny-radius):
 						#Generate window around current point
-
+						pts1 = rf1[i-radius:i+radius, j-radius:j+radius]
+						pts2 = rf1_recon[i-radius:i+radius, j-radius:j+radius]
+						pts1 = np.reshape(pts1, (-1,1))
+						pts2 = np.reshape(pts2, (-1,1))
 						#Measure similiarty here
+						sim1[i,j] = np.corrcoef(pts1, pts2)
+
+						#Generate window around current point
+						pts1 = rf2[i-radius:i+radius, j-radius:j+radius]
+						pts2 = rf2_recon[i-radius:i+radius, j-radius:j+radius]
+						pts1 = np.reshape(pts1, (-1,1))
+						pts2 = np.reshape(pts2, (-1,1))
+						#Measure similiarty here
+						sim2[i,j] = np.corrcoef(pts1, pts2)
 
 				#Save these results
 
