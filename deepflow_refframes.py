@@ -39,6 +39,8 @@ Ben Lansdell
 	args.fn_in = '../hydra/video/20160412/stk_0001_Substack (1-5000).tif'
 	args.ref_frames = [1, 40, 80, 120, 160]
 	args.dir_out = './register/20160412stk0001/'
+	args.name = '20160412stk0001'
+	args.path_in = '../hydra/video/20160412/stk_0001/';
 
 	#args.ref_frames = [1, 2, 3]
 	#args.dir_out = './register/test/'
@@ -56,14 +58,17 @@ Ben Lansdell
 	#Use convert to extract frames
 
 	# to open a tiff file for reading:
-	#tif = TIFF.open(args.fn_in, mode='r')
-	#for idx, image in enumerate(tif.iter_images()): # do stuff with image
-	#	if idx in args.ref_frames:
-	#		images.append(image)
-	#tif.close()
+	tif = TIFF.open(args.fn_in, mode='r')
+	info = tif.info()
+	nframes = int(info.split('\n')[2].split('=')[1])
+
+	for idx, image in enumerate(tif.iter_images()): # do stuff with image
+		if idx in args.ref_frames:
+			images.append(image)
+	tif.close()
 
 	for frame in args.ref_frames:
-		os.system('convert "%s"[%d] -resize 50%% %s/refframes/frame_%04d.tif'%(args.fn_in, frame, args.dir_out, frame))
+		os.system('convert "%s"[%d] -auto-level -depth 8 %s/refframes/frame_%04d.tif'%(args.fn_in, frame, args.dir_out, frame))
 		os.system('convert "%s"[%d] -resize 50%% -auto-level -depth 8 %s/refframes/frame_%04d.png'%(args.fn_in, frame, args.dir_out, frame))
 
 	#for frame, image in zip(args.ref_frames, images):
@@ -96,15 +101,16 @@ Ben Lansdell
 	#Run MFSF
 	for idx,ref in enumerate(args.ref_frames):
 		if idx == 0:
-			start = 0
+			start = 1
 		else:
 			start = args.ref_frames[idx-1]
-		if idx < nF:
+		if idx < nF-1:
 			end = args.ref_frames[idx+1]
 		else:
 			end = nframes
 		#Call MFSF matlab script...
-		call = 'matlab /r "startup; run_mfsf(2)"'
+		call = 'matlab -r "startup; run_mfsf_df(\'%s\', \'%s\', %d, %d, %d); exit;"' \
+				%(args.path_in, args.name, start, ref, end-start+1)
 		os.system(call)
 
 if __name__ == "__main__":
