@@ -11,7 +11,7 @@ from matplotlib import pyplot as plt
 import cv2 
 import numpy as np 
 
-mfsf_in = './stitched/test_stitch.mat'
+mfsf_in = './test_stitch.mat'
 fn_in = '../hydra/video/20160412/stk_0001_0002.avi'
 #fn_in = '../hydra/video/20160412/stk_0001.avi'
 mask_in = './stitched/frame_100_roi.png'
@@ -108,5 +108,5 @@ if not os.path.exists(overlayoutput):
 
 os.system('cp ' + imageoutput + '_frame_*overlay* ' + overlayoutput)
 
-avconv = 'avconv -i ' + overlayoutput + 'overlay_%03d.png -c:v huffyuv -y'
+avconv = 'avconv -i ' + overlayoutput + '_frame_%03d_overlay.png -c:v huffyuv -y'
 os.system(avconv + ' ' + overlayoutput + 'output.avi')

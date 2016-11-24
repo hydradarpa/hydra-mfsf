@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env pythonx
 import sys 
 import argparse 
 from stitcher import Stitcher
@@ -10,27 +10,27 @@ from matplotlib import pyplot as plt
 from vispy import gloo
 from vispy import app
 
-def main():
-	usage = """stitch_mfsf.py [output_matfile] [input_matfile 1] [input_matfile 2] <input_matfile 3> ...
-
-Stitch together separate MFSF optic flow fields from separate videos into the one flow field 
-whose coordinates are relative to the reference frame in the first video. This can be used for
-tracking objects marked in the first video through later videos.
-
-Example: 
-./stitch_mfsf.py [stk_1-2.mat] [results_stk_0001.mat] [results_stk_0002.mat]
-
-For help:
-./stitch_mfsf.py -h 
-
-Ben Lansdell
-10/12/2016
-"""
-
-	parser = argparse.ArgumentParser()
-	parser.add_argument('fn_out', help='output mat file')
-	parser.add_argument('flow_in', help='input mat files from MFSF', nargs = '+')
-	args = parser.parse_args()
+#def main():
+#	usage = """stitch_mfsf.py [output_matfile] [input_matfile 1] [input_matfile 2] <input_matfile 3> ...
+#
+#Stitch together separate MFSF optic flow fields from separate videos into the one flow field 
+#whose coordinates are relative to the reference frame in the first video. This can be used for
+#tracking objects marked in the first video through later videos.
+#
+#Example: 
+#./stitch_mfsf.py [stk_1-2.mat] [results_stk_0001.mat] [results_stk_0002.mat]
+#
+#For help:
+#./stitch_mfsf.py -h 
+#
+#Ben Lansdell
+#10/12/2016
+#"""
+#
+#	parser = argparse.ArgumentParser()
+#	parser.add_argument('fn_out', help='output mat file')
+#	parser.add_argument('flow_in', help='input mat files from MFSF', nargs = '+')
+#	args = parser.parse_args()
 
 	#Test code
 	class Args:

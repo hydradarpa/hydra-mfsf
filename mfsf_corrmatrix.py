@@ -112,7 +112,8 @@ Ben Lansdell
 
 		#Save error matrices
 		fn_out = args.dir_in + 'corrmatrix/%04d_%04d_mfsf_err.npz'%(r1, r2)
-		np.savez(fn_out, fwderr = fwderr, fwdtracked = fwdtracked)
+		np.savez(fn_out, fwderr = fwderr, fwdtracked = fwdtracked, reverr = reverr,\
+			revtracked = revtracked)
 
 if __name__ == "__main__":
 	sys.exit(main())

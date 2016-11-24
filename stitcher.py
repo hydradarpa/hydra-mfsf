@@ -36,10 +36,10 @@ class Stitcher(app.Canvas):
 	def __init__(self, u2, v2):
 
 		title = 'The Stitcher'
-		nx = u2.shape[0]
-		ny = u2.shape[1]
+		nx = u2.shape[1]
+		ny = u2.shape[0]
 		self.shape = (nx, ny)
-		app.Canvas.__init__(self, title = title, show = False, size=self.shape, resizable=False)
+		app.Canvas.__init__(self, title = title, show = False, size=(nx, ny), resizable=False)
 
 		#Make triangles and vertex coords
 		xv,yv = np.meshgrid(range(nx),range(ny))
@@ -54,8 +54,8 @@ class Stitcher(app.Canvas):
 				p2 = idxy*nx + idxx + 1 
 				p3 = (idxy+1)*nx + idxx
 				p4 = (idxy+1)*nx + idxx + 1
-				t1 = [p1, p2, p4]
-				t2 = [p3, p1, p4]
+				t1 = [p1, p4, p2]
+				t2 = [p1, p3, p4]
 				triangles[count,:] = t1
 				triangles[count + 1,:] = t2
 				count += 2
@@ -81,8 +81,10 @@ class Stitcher(app.Canvas):
 		self._fboi = gloo.FrameBuffer(self._rendertexi, gloo.RenderBuffer(self.shape))
 		self._fboj = gloo.FrameBuffer(self._rendertexj, gloo.RenderBuffer(self.shape))
 
+		#self.show()
 		gloo.set_clear_color('black')
-		gloo.set_viewport(0, 0, *self.shape)
+		gloo.set_viewport(0, 0, *self.physical_size)
+		#gloo.set_viewport(0, 0, ny, nx)
 
 		self.u2 = u2 
 		self.v2 = v2 
@@ -90,15 +92,17 @@ class Stitcher(app.Canvas):
 	def run(self, u1, v1):
 		#Render this baby
 		(pi, pj) = self.render()
+		#print 'pi.shape:', pi.shape 
+		#print 'pj.shape:', pj.shape 
 
 		#Make a plot of the babies to see what they look like...
 		f, (ax1, ax2) = plt.subplots(1, 2, sharey=True)
 		ii = ax1.imshow(pi)
 		ij = ax2.imshow(pj)
-		ax1.set_xlim([0, 1024])
-		ax1.set_ylim([0, 1024])
-		ax2.set_xlim([0, 1024])
-		ax2.set_ylim([0, 1024])
+		ax1.set_xlim((0, self.shape[0]))
+		ax1.set_ylim((0, self.shape[1]))
+		ax2.set_xlim((0, self.shape[0]))
+		ax2.set_ylim((0, self.shape[1]))
 		f.colorbar(ii)
 		plt.show()
 
@@ -109,23 +113,33 @@ class Stitcher(app.Canvas):
 		v = np.zeros(self.v2.shape)
 
 		(nx, ny) = self.shape
-		for i in range(nx):
+		for i in range(ny):
 			print("Shifting row %d"%i)
-			for j in range(ny):
+			for j in range(nx):
 				#Get a path's final location in first video
-				ip = max(0, min(nx-1, int(i + uf[i,j])))
-				jp = max(0, min(ny-1, int(j + vf[i,j])))
+				ip = max(0, min(ny-1, int(i + vf[i,j])))
+				jp = max(0, min(nx-1, int(j + uf[i,j])))
 				#Find that location in the second video's reference frame
 				fix = int(pi[ip, jp])
 				fiy = int(pj[ip, jp])
+				#print 'ip, jp, fiy, fix'
+				#print ip, jp, fiy, fix
 				#Use that reference pixel's optic flow data, with reference point adjusted
-				u[i,j,:] = fix - i + self.u2[fix,fiy,:]
-				v[i,j,:] = fiy - j + self.v2[fix,fiy,:]
+				u[i,j,:] = fix - j + self.u2[fiy,fix,:]
+				v[i,j,:] = fiy - i + self.v2[fiy,fix,:]
 
 		return u, v
 
 	def on_resize(self, event):
 		pass
+
+	def draw(self, event):
+		#gloo.set_state('additive')
+		#gloo.set_state(cull_face = False)
+		#gloo.set_cull_face('front')
+		gloo.clear()
+		self._program_flow.bind(self._vbo)
+		self._programi.draw('triangles', self.indices_buffer)
 
 	def render(self):
 		with self._fboi:
@@ -140,7 +154,7 @@ class Stitcher(app.Canvas):
 
 	#Load mesh data
 	def loadMesh(self, vertices, triangles, u, v):
-		# Create vetices and texture coords, combined in one array for high performance
+		# Create vertices and texture coords, combined in one array for high performance
 		self.nP = vertices.shape[0]
 		self.nT = triangles.shape[0]
 
@@ -149,7 +163,8 @@ class Stitcher(app.Canvas):
 
 		warped_vertices = np.zeros(vertices.shape)
 		for i,p in enumerate(vertices):
-			wi = [p[0] + u[p[0], p[1], 0], p[1] + v[p[0], p[1], 0]]
+			#wi = [p[0] + u[p[0], p[1], 0], p[1] + v[p[0], p[1], 0]]
+			wi = [p[0] + u[p[1], p[0], 0], p[1] + v[p[1], p[0], 0]]
 			warped_vertices[i,:] = wi
 
 		verdata = np.zeros((self.nP,3))
@@ -159,8 +174,12 @@ class Stitcher(app.Canvas):
 		(nx,ny) = self.shape
 		verdata[:,0] = 2*warped_vertices[:,0]/nx-1
 		verdata[:,1] = 2*warped_vertices[:,1]/ny-1
+		#verdata[:,0] = warped_vertices[:,0]/nx
+		#verdata[:,1] = warped_vertices[:,1]/ny
+
 		#Does this need to be flipped?
 		verdata[:,1] = -verdata[:,1]
+		#verdata[:,0] = -verdata[:,0]
 
 		uvdata = vertices.astype(np.float32)
 		uvdata[:,0] = uvdata[:,0]/nx

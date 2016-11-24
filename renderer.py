@@ -313,10 +313,10 @@ class Renderer(app.Canvas):
 		b=self.context.shared._parser.get_object(self._rendertex2.id)._handle
 		c=self.context.shared._parser.get_object(self._rendertex3.id)._handle
 		d=self.context.shared._parser.get_object(self._rendertex4.id)._handle
-		if multi:
-			self.cudagl = CUDAGL_multi(self._rendertex1, self._rendertex2, self._rendertex3, self._rendertex4, self._fbo1, self._fbo2, self._fbo3, self._fbo4, a, b, c, d, eps_Z, eps_J, eps_M, cuda, self.n, len(self.Q))
-		else:
-			self.cudagl = CUDAGL(self._rendertex1, self._rendertex2, self._rendertex3, self._rendertex4, self._fbo1, self._fbo2, self._fbo3, self._fbo4, a, b, c, d, eps_Z, eps_J, eps_M, cuda)
+		#if multi:
+		#	self.cudagl = CUDAGL_multi(self._rendertex1, self._rendertex2, self._rendertex3, self._rendertex4, self._fbo1, self._fbo2, self._fbo3, self._fbo4, a, b, c, d, eps_Z, eps_J, eps_M, cuda, self.n, len(self.Q))
+		#else:
+		#	self.cudagl = CUDAGL(self._rendertex1, self._rendertex2, self._rendertex3, self._rendertex4, self._fbo1, self._fbo2, self._fbo3, self._fbo4, a, b, c, d, eps_Z, eps_J, eps_M, cuda)
 
 		#print self.size
 		#self._backend._vispy_set_size(*size)
@@ -483,18 +483,21 @@ class Renderer(app.Canvas):
 		with self._fbo2:
 			print 'saving flowx'
 			pixels = gloo.read_pixels(out_type = np.float32)[:,:,0]
-			fn = './' + basename + '_flowx_' + strftime("%Y-%m-%d_%H:%M:%S", gmtime()) + '.png'
+			#fn = './' + basename + '_flowx_' + strftime("%Y-%m-%d_%H:%M:%S", gmtime()) + '.png'
+			fn = './' + basename + '_flowx.png'
 			#print np.max(pixels)
 			cv2.imwrite(fn, (255.*(pixels-np.min(pixels))/(np.max(pixels)-np.min(pixels))).astype(int))
 		with self._fbo3:
 			print 'saving flowy'
 			pixels = gloo.read_pixels(out_type = np.float32)[:,:,0]
-			fn = './' + basename + '_flowy_' + strftime("%Y-%m-%d_%H:%M:%S", gmtime()) + '.png'
+			#fn = './' + basename + '_flowy_' + strftime("%Y-%m-%d_%H:%M:%S", gmtime()) + '.png'
+			fn = './' + basename + '_flowy.png'
 			cv2.imwrite(fn, (255.*(pixels-np.min(pixels))/(np.max(pixels)-np.min(pixels))).astype(int))
 		if not saveall:
 			pixels = gloo.read_pixels()
 			pixels = cv2.cvtColor(pixels, cv2.COLOR_BGRA2RGBA)
-			fn = './' + basename + '_' + self.state + '_' + strftime("%Y-%m-%d_%H:%M:%S", gmtime()) + '.png'
+			#fn = './' + basename + '_' + self.state + '_' + strftime("%Y-%m-%d_%H:%M:%S", gmtime()) + '.png'
+			fn = './' + basename + '_' + self.state + '.png'
 			print 'Saving screenshot to ' + fn
 			cv2.imwrite(fn, pixels)
 			return None
@@ -513,7 +516,8 @@ class Renderer(app.Canvas):
 				pixels = cv2.cvtColor(pixels, cv2.COLOR_BGRA2RGBA)
 				if state == 'overlay':
 					overlay = pixels
-				fn = './' + basename + '_' + state + '_' + strftime("%Y-%m-%d_%H:%M:%S", gmtime()) + '.png'
+				#fn = './' + basename + '_' + state + '_' + strftime("%Y-%m-%d_%H:%M:%S", gmtime()) + '.png'
+				fn = './' + basename + '_' + state + '.png'
 				#print 'Saving screenshot to ' + fn
 				cv2.imwrite(fn, pixels)
 			self.state = oldstate
