@@ -281,6 +281,10 @@ class Renderer(app.Canvas):
 		self._program_outline.bind(self._vbo)
 		self._setoutlinecolors()
 
+		self._program_wireframe = gloo.Program(VERT_SHADER, FRAG_SHADER)
+		#self._program_wireframe['texture1'] = self.init_texture
+		#self._program_wireframe.bind(self._vbo)
+
 		#Create FBOs, attach the color buffer and depth buffer
 		self.shape = (nx, nx)
 		self._rendertex1 = gloo.Texture2D((self.shape + (1,)), format="luminance", internalformat="r8")
@@ -392,6 +396,10 @@ class Renderer(app.Canvas):
 			self._program_green.bind(self._vbo)
 			self._program_green['texture1'] = self.init_texture
 			self._program_green.draw('triangles', self.indices_buffer)
+		elif self.state == 'wireframe':
+			self._program_wireframe['texture1'] = self.current_texture
+			self._program_wireframe.bind(self._quad)
+			self._program_wireframe.draw('triangles', self.quad_buffer)
 		elif self.state == 'inverse':
 			#Load current frame as texture
 			self._program_inverse['texture1'] = self.current_texture
@@ -406,7 +414,10 @@ class Renderer(app.Canvas):
 		#Draw wireframe, too
 		if self.state != 'raw' and self.state != 'outline':
 			gloo.set_state('opaque')
+			if self.state == 'wireframe':
+				gloo.set_line_width(3)
 			self._program_lines.draw('lines', self.outline_buffer)
+			gloo.set_line_width(1)
 
 	def on_key_press(self, event):
 		if event.key in [' ']:
@@ -523,6 +534,18 @@ class Renderer(app.Canvas):
 			self.state = oldstate
 			self.update()
 			return overlay
+
+	def wireframe(self):
+		oldstate = self.state
+		self._updatemaskpalette(np.squeeze(self.hessfacecolors[:,:,1]))
+		self.state = 'wireframe'
+		self._updatemaskpalette(np.squeeze(self.hessfacecolors[:,:,1]))
+		self.draw(None)
+		pixels = gloo.read_pixels()
+		pixels = cv2.cvtColor(pixels, cv2.COLOR_BGRA2RGBA)
+		self.state = oldstate
+		self.update()
+		return pixels
 
 	def getpredimg(self):
 		oldstate = self.state

@@ -6,10 +6,16 @@ from distmesh_dyn import DistMesh
 from scipy.io import loadmat 
 from imgproc import findObjectThreshold, load_ground_truth
 from matplotlib import pyplot as plt
+import matplotlib
 
 import cv2 
 import numpy as np 
 from numpy.random import choice, randint
+
+font = {'family' : 'normal',
+        'size'   : 28}
+
+matplotlib.rc('font', **font)
 
 fn_in = '../hydra/video/20160412/stk_0001_0002.avi'
 mask_in = './stitched/frame_100_roi_body.png'
@@ -21,8 +27,13 @@ dm_out = 'darpa_mesh.pkl'
 
 threshold = 2
 cuda = True
-gridsize = 60
-nR = 50 #Number of neurons to display 
+gridsize = 40
+nR = 10 		#Number of neurons to display per class
+radius = 6
+trackedthresh = 10
+err_nx = 1136.
+err_ny = 386.
+dpi = 96.
 
 imageoutput = mfsf_in + '/mesh_neurons/'
 #Make directory if needed...
@@ -89,6 +100,7 @@ truepositions = np.zeros((nF, nC, 2))
 estpositions = np.zeros((nF, nC, 2))
 refpositions_cells = np.zeros((nC, 2))
 distance_error = np.zeros((nF, nC))
+max_error = np.zeros(nC)
 
 for cell, loc in true_cells[0][nref].iteritems():
 	refpositions_cells[cell-1,:] = loc 
@@ -108,27 +120,61 @@ for idx in range(nF):
 		tp = truepositions[idx,c,:]
 		ep = estpositions[idx,c,:]
 		distance_error[idx,c] = np.sqrt(np.sum((tp-ep)*(tp-ep)))
+max_error = distance_error.max(0)
 
 #Remove cells outside mask
 inmask = mask[refpositions_cells[:,1].astype(int), refpositions_cells[:,0].astype(int)].astype(bool)
 estpositions = estpositions[:,inmask,:]
 distance_error = distance_error[:,inmask]
+max_error = max_error[inmask]
+
 nC = estpositions.shape[1]
 
-#Select a random subset of neurons to display
-rndchoice = choice(range(nC), nR)
-estpositions = estpositions[:,rndchoice,:]
-distance_error = distance_error[:,rndchoice]
-nC = nR 
+#Select a random subset of tracked and untracked neurons to display
+tracked = np.where(max_error < trackedthresh)[0]
+untracked = np.where(max_error > trackedthresh)[0]
+
+trackedchoice = choice(tracked, nR)
+untrackedchoice = choice(untracked, nR)
+tracked_estpositions = estpositions[:,trackedchoice,:]
+tracked_distance_error = distance_error[:,trackedchoice]
+untracked_estpositions = estpositions[:,untrackedchoice,:]
+untracked_distance_error = distance_error[:,untrackedchoice]
+nC = nR
 
 #Pick some random colors
-colors = np.zeros((nF, nC, 4))
-colors[:,:,3] = 255
-for idx in range(nC):
-	colors[:,idx,0:3] = randint(0, 256, 3)
+trackedcolor = np.array([0, 200, 50, 255])
+errcolor = np.array([50, 50, 255, 255])
+errcolor_rgb = np.array([255, 50, 50, 255])
 
-fig1 = plt.figure()
+fig1 = plt.figure(figsize = (1.5*err_nx/dpi, 1.5*err_ny/dpi), dpi = dpi)
 ax1 = fig1.add_subplot(111)
+ax1.spines['right'].set_visible(False)
+ax1.spines['top'].set_visible(False)
+
+plt.tick_params(
+    axis='x',          # changes apply to the x-axis
+    which='both',      # both major and minor ticks are affected
+    bottom='off',      # ticks along the bottom edge are off
+    top='off',         # ticks along the top edge are off
+    labelbottom='on') # labels along the bottom edge are off
+
+plt.tick_params(
+    axis='x',          # changes apply to the x-axis
+    which='minor',      # both major and minor ticks are affected
+    labelbottom='off') # labels along the bottom edge are off
+
+plt.tick_params(
+    axis='y',          # changes apply to the x-axis
+    which='minor',      # both major and minor ticks are affected
+    labelleft='off') # labels along the bottom edge are off
+
+plt.tick_params(
+    axis='y',          # changes apply to the x-axis
+    which='both',      # both major and minor ticks are affected
+    left='off',      # ticks along the bottom edge are off
+    right='off',         # ticks along the top edge are off
+    labelleft='on') # labels along the bottom edge are off
 
 for idx in range(nF):
 	print("Visualizing frame %d" % idx)
@@ -145,30 +191,55 @@ for idx in range(nF):
 	kf.state.render()
 	wireframe = kf.state.renderer.wireframe()
 
+	trackedwire = wireframe.copy()
+	untrackedwire = wireframe.copy()
+
 	#Display the neurons on top of the wireframe...
 	for c in range(nC):
-		center = tuple(estpositions[idx,c,:].astype(int))
-		radius = 3
+		center = tuple(tracked_estpositions[idx,c,:].astype(int))
+		untrackedcenter = tuple(untracked_estpositions[idx,c,:].astype(int))
 		#color = (colors[idx,c,:]*255).astype(np.uint8)
-		color = colors[idx,c,:]
-		wireframe = cv2.circle(wireframe, center, radius, (tuple(color)), -1)
+		trackedwire = cv2.circle(trackedwire, center, radius, (tuple(trackedcolor)), -1)
+		untrackedwire = cv2.circle(untrackedwire, untrackedcenter, radius, (tuple(errcolor)), -1)
+		untrackedwire = cv2.circle(untrackedwire, center, radius, (tuple(trackedcolor)), -1)
 
 	#Save image
-	fn_out = "%s/frame_%04d.png"%(imageoutput,idx)
-	cv2.imwrite(fn_out, wireframe)
+	fn_out = "%s/frame_%04d_untracked.png"%(imageoutput,idx)
+	cv2.imwrite(fn_out, untrackedwire)
+	fn_out = "%s/frame_%04d_tracked.png"%(imageoutput,idx)
+	cv2.imwrite(fn_out, trackedwire)
 
 	#Now also make the errors plot...
-	fn_out = "%s/frame_errors_%04d.png"%(imageoutput,idx)
+	#Tracked only
+	fn_out = "%s/frame_tracked_errors_%04d.png"%(imageoutput,idx)
 	ax1.cla()
-	xpast = range(idx)
+	xpast = np.arange(idx)
 	xfuture = range(idx, nF);
-	ax1.plot(xpast, distance_error[xpast,:], linewidth = 0.5)
-	for i,ln in enumerate(ax1.lines):
-		ln.set_color(colors[idx, i,:]/255.)
+	ax1.plot(xpast/10., tracked_distance_error[xpast,:], linewidth = 3, color = tuple(trackedcolor/255.), zorder = 1)
 	#ax1.plot(xfuture, distance_error[xfuture,:], linewidth = 0.5, color = (0.8, 0.8, 0.8))
-	ax1.scatter(x = (idx-1)*np.ones(nC), y = distance_error[idx,:], color = colors[idx,:,:]/255., s = 2)
+	ax1.scatter(x = (idx-1)*np.ones(nC)/10., y = tracked_distance_error[max(0,idx-1),:], color = (0,0,0), s = 20, zorder = 2)
 	ax1.set_ylim([0, 30])
-	ax1.set_xlim([0, nF])
-	ax1.set_ylabel('Tracking error in pixels')
-	ax1.set_xlabel('Frame')
+	ax1.set_xlim([0, nF/10.])
+	ax1.set_ylabel('tracking error (pixels)')
+	ax1.set_xlabel('time (s)')
+	#plt.show()
+	ax1.set_xticks(np.array([10, 20]))
+	ax1.set_yticks(np.array([0, 15, 30]))
+	plt.savefig(fn_out, bbox_inches = 'tight')
+
+	#Tracked and untracked
+	fn_out = "%s/frame_untracked_errors_%04d.png"%(imageoutput,idx)
+	ax1.cla()
+	xpast = np.arange(idx)
+	xfuture = range(idx, nF);
+	ax1.plot(xpast/10., untracked_distance_error[xpast,:], linewidth = 3, color = tuple(errcolor_rgb/255.), zorder = 2)
+	ax1.plot(np.arange(nF)/10., tracked_distance_error[:,:], linewidth = 3, color = tuple(trackedcolor/255.), zorder = 1)
+	#ax1.plot(xfuture, distance_error[xfuture,:], linewidth = 0.5, color = (0.8, 0.8, 0.8))
+	ax1.scatter(x = (idx-1)*np.ones(nC)/10., y = untracked_distance_error[max(0,idx-1),:], color = (0,0,0), s = 20, zorder = 3)
+	ax1.set_ylim([0, 30])
+	ax1.set_xlim([0, nF/10.])
+	ax1.set_ylabel('tracking error (pixels)')
+	ax1.set_xlabel('time (s)')
+	ax1.set_xticks(np.array([10, 20]))
+	ax1.set_yticks(np.array([0, 15, 30]))
 	plt.savefig(fn_out, bbox_inches = 'tight')
