@@ -4,11 +4,14 @@ import argparse
 from stitcher import Stitcher
 from scipy.io import loadmat, savemat 
 import numpy as np 
+import os
 
 from matplotlib import pyplot as plt
 
 from vispy import gloo
 from vispy import app
+
+import gc 
 
 #def main():
 #	usage = """stitch_mfsf.py [output_matfile] [input_matfile 1] [input_matfile 2] <input_matfile 3> ...
@@ -36,9 +39,18 @@ from vispy import app
 	class Args:
 		pass 
 	args = Args()
-	args.fn_out = './test_stitch.mat'
+	args.fn_out = './stitched/stk_0001-0008/'
 	args.flow_in = ['./mfsf_output/stack0001_nref100_nframe250/result.mat',\
-					'./mfsf_output/stack0002_nref100_nframe250/result.mat']
+					'./mfsf_output/stack0002_nref100_nframe250/result.mat',\
+					'./mfsf_output/stack0003_nref100_nframe250/result.mat',\
+					'./mfsf_output/stack0004_nref100_nframe250/result.mat',\
+					'./mfsf_output/stack0005_nref100_nframe250/result.mat',\
+					'./mfsf_output/stack0006_nref100_nframe250/result.mat',\
+					'./mfsf_output/stack0007_nref100_nframe250/result.mat',\
+					'./mfsf_output/stack0008_nref100_nframe250/result.mat']
+
+	if not os.path.exists(args.fn_out):
+    	os.makedirs(args.fn_out)
 
 	nV = len(args.flow_in)
 	if nV != 2:
@@ -58,37 +70,34 @@ from vispy import app
 	nx = u0.shape[0]
 	ny = u0.shape[1]
 
-	#Load remained of MFSF data to get total frames
-	for vidx in range(1,nV):
-		a = loadmat(args.flow_in[vidx])	
-		nF[vidx] = a['u'].shape[2]	
+	#Write this data to a mat file
+	mdict = {'u':u0, 'v':v0, 'parmsOF':params, 'info':info}
+	savemat(args.fn_out+'/mfsf_000.mat', mdict)
 
-	#Initialize data
-	us = np.zeros((nx, ny, np.sum(nF)))
-	vs = np.zeros((nx, ny, np.sum(nF)))
-	us[:,:,0:nF[0]] = u0
-	vs[:,:,0:nF[0]] = v0
-
-	#Load in optic flow data
+	#Load in optic flow data of the remaining videos
 	for vidx in range(1,nV):
-		#vidx = 1
 		#Load MFSF data
 		a = loadmat(args.flow_in[vidx])	
 		params = a['parmsOF']
+		nF[vidx] = a['u'].shape[2]	
+
 		u1 = a['u']
 		v1 = a['v']
-		#Make a Stitcher
+		#Make a Stitcher. Takes the second set's flow data as input
 		thestitch = Stitcher(u1, v1)
-
-		self = thestitch
 		(u, v) = thestitch.run(u0, v0)
 
-		us[:,:,np.sum(nF[0:vidx]):np.sum(nF[0:vidx+1])] = u
-		vs[:,:,np.sum(nF[0:vidx]):np.sum(nF[0:vidx+1])] = v
+		#Could just update the present object instead....
+		del thestitch
+		unreachable = gc.collect()
+		#self = thestitch
 
-	#Save output matrix
-	mdict = {'u':us, 'v':vs, 'parmsOF':params, 'info':info}
-	savemat(args.fn_out, mdict)
+		u0 = u.copy()
+		v0 = v.copy()
+
+		#Save output matrix
+		mdict = {'u':u, 'v':v, 'parmsOF':params, 'info':info}
+		savemat(args.fn_out + '/mfsf_%03d.mat'%vidx, mdict)
 		
 if __name__ == "__main__":
 	sys.exit(main())

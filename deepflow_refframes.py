@@ -14,8 +14,6 @@ DF = '~/deepflow/deepflow2-static'
 def main():
 	usage = """deepflow_refframes.py [input_tiff] [output_dir] [ref frame 1] [ref frame 2] <ref frame 3> ...
 
-Normalize intensity of tiff stack 
-
 Example: 
 ./deepflow_refframes.py "../hydra/video/20160412/stk_0001_Substack (1-5000).tif" ./register/20160412stk0001/ 1 40 80 120 
 

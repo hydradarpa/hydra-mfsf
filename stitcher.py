@@ -96,15 +96,15 @@ class Stitcher(app.Canvas):
 		#print 'pj.shape:', pj.shape 
 
 		#Make a plot of the babies to see what they look like...
-		f, (ax1, ax2) = plt.subplots(1, 2, sharey=True)
-		ii = ax1.imshow(pi)
-		ij = ax2.imshow(pj)
-		ax1.set_xlim((0, self.shape[0]))
-		ax1.set_ylim((0, self.shape[1]))
-		ax2.set_xlim((0, self.shape[0]))
-		ax2.set_ylim((0, self.shape[1]))
-		f.colorbar(ii)
-		plt.show()
+		#f, (ax1, ax2) = plt.subplots(1, 2, sharey=True)
+		#ii = ax1.imshow(pi)
+		#ij = ax2.imshow(pj)
+		#ax1.set_xlim((0, self.shape[0]))
+		#ax1.set_ylim((0, self.shape[1]))
+		#ax2.set_xlim((0, self.shape[0]))
+		#ax2.set_ylim((0, self.shape[1]))
+		#f.colorbar(ii)
+		#plt.show()
 
 		uf = np.squeeze(u1[:,:,-1])
 		vf = np.squeeze(v1[:,:,-1])

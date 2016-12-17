@@ -16,6 +16,10 @@ from cuda_multi import CUDAGL, CUDAGL_multi
 
 from cvtools import * 
 
+import libtiff as lt 
+from libtiff import TIFF
+
+
 CV_MAT_DEPTH_MASK = 7
 CV_CN_SHIFT = 3
 
@@ -942,3 +946,38 @@ class FlowStream:
 			return True 
 		else:
 			return False 
+
+class TIFFStream:
+	def __init__(self, fn, threshold):
+		print("Creating TIFF stream from " + fn)
+		print("Background subtraction below intensity " + str(threshold))
+		self.threshold = threshold
+
+		# to open a tiff file for reading:
+		self.tif = TIFF.open(fn, mode='r')
+		self.info = self.tif.info()
+		self.nframes = int(self.info.split('\n')[3].split('=')[1])
+		self.gen = self.tif.iter_images()
+		self.nx = int(self.info.split('\n')[10].split(':')[1])
+		self.ny = int(self.info.split('\n')[11].split(':')[1])
+		self.frame = None
+		#self.frame_orig = frame.copy()
+		#self.grayframe = cv2.cvtColor(self.frame,cv2.COLOR_BGR2GRAY)
+
+	def read(self, backsub = True):
+		mask = None 
+		try:
+			ret = True
+			self.frame = self.gen.next()
+		except:
+			ret = False
+			self.frame = None
+			return ret, self.frame, mask
+
+		if not backsub:
+			return ret, self.frame, mask
+		else:
+			(mask, ctrs, fd) = findObjectThreshold(self.frame, threshold = self.threshold)
+			#Apply mask
+			backframe = np.multiply(mask, self.frame)
+			return ret, backframe, mask
