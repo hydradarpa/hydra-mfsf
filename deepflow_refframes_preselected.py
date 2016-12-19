@@ -74,18 +74,26 @@ Ben Lansdell
 				fn2 = int(os.path.splitext(os.path.basename(im2))[0].split('_')[1])
 				print("DeepMatching between frame %d and %d" %(fn1, fn2))
 				fn_out = args.path_in + 'corrmatrix/%04d_%04d.txt'%(fn1,fn2)
-				os.system('python %s %s %s -out %s' %(DM, im1, im2, fn_out)) 
+				os.system('python %s %s %s -ds 2 -out %s' %(DM, im1, im2, fn_out)) 
 
 	#Run DeepFlow
-	#for i in range(nF):
-	#	im1 = args.dir_out + 'refframes/frame_%04d.png'%args.ref_frames[i]
-	#	for j in range(nF):
-	#		if i != j:
-	#			print("DeepFlow between frame %d and %d" %(args.ref_frames[i], args.ref_frames[j]))
-	#			im2 = args.dir_out + 'refframes/frame_%04d.png'%args.ref_frames[j]
-	#			fn_out = args.dir_out + 'corrmatrix/%04d_%04d.flo'%(args.ref_frames[i],args.ref_frames[j])
-	#			matches = args.dir_out + 'corrmatrix/%04d_%04d.txt'%(args.ref_frames[i],args.ref_frames[j])
-	#			os.system(DF + ' %s %s %s -match %s' %(im1, im2, fn_out, matches)) 
+	for r in range(nR):
+		i = rframeidx[r]
+		im1 = iframes[i]
+		im1 = im1[0:-3] + 'png'
+		#Get frame number 
+		fn1 = int(os.path.splitext(os.path.basename(im1))[0].split('_')[1])
+		for j in range(nF):
+			if i != j:
+				im2 = iframes[j]
+				im2 = im2[0:-3] + 'png'
+				fn2 = int(os.path.splitext(os.path.basename(im2))[0].split('_')[1])
+				print("DeepFlow between frame %d and %d" %(fn1, fn2))
+				fn_out = args.path_in + 'corrmatrix/%04d_%04d.flo'%(fn1,fn2)
+				matches = args.path_in + 'corrmatrix/%04d_%04d.txt'%(fn1,fn2)
+				os.system(DF + ' %s %s %s -match %s' %(im1, im2, fn_out, matches)) 
+
+	#Generate error images
 
 	#Run MFSF
 	#for idx,ref in enumerate(args.ref_frames):
