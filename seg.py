@@ -22,6 +22,7 @@ def get_cmap(N):
         return (np.array(scalar_map.to_rgba(index))*255).astype(np.uint8)[0:3]
     return map_index_to_rgb_color
 
+
 def J1(x, h):
 	return np.sum(np.linalg.norm(grad(x,h), axis = 2))
 
@@ -37,9 +38,9 @@ def chambolle(x, y, z, tau, sigma, theta, K, K_star, f, res_F, res_G, res_H, j_t
 		print('%d\t%e\t%e\t%e\t%e'%(n, err, ju, fu, obj))
 		if (err < eps) and (n > 0):
 			break
+		z = res_H(z + sigma*x_bar)
 		x_old = x.copy()
 		y = res_F(y + sigma*K(x_bar))
-		z = res_H(z + sigma*x_bar)
 		x = res_G(x - tau*(K_star(y)+z+f))
 		x_bar = x + theta*(x - x_old)
 	return x
@@ -107,11 +108,15 @@ def group_LASSO(u, rho):
 	for i in range(k):
 		ui = u[:,:,i,:]
 		n = np.sqrt(np.sum(ui*ui))
+		print n 
 		if n > 0:
 			prox[:,:,i,:] = softmax(n, rho)*ui/n
 	return prox
 
 def mumford_glasso(path_in, iframes, refframes, l=5, r = 1e4):
+	l = 5 
+	r = 1e4
+
 	#Params from [1]
 	theta = 1
 	tau = 0.05
@@ -123,8 +128,10 @@ def mumford_glasso(path_in, iframes, refframes, l=5, r = 1e4):
 
 	#Test params
 	path_in = './register/20160412stk0001-0008/'
-	iframes = [1, 501, 1001, 1501]
-	refframes = [1, 501, 1001, 1501]
+	#iframes = [1, 501, 1001, 1501]
+	#refframes = [1, 501, 1001, 1501]
+	iframes = [1, 501]
+	refframes = [1, 501]
 
 	nK = len(refframes)
 	nL = len(iframes)
@@ -162,8 +169,14 @@ def mumford_glasso(path_in, iframes, refframes, l=5, r = 1e4):
 
 	#Run chambolle algorithm
 	n_iter = 30
-	u_s = chambolle(u, p, q, tau, sigma, theta, K, K_star, f, res_F,\
+
+	#CPU
+	u_s_cpu = chambolle(u, p, q, tau, sigma, theta, K, K_star, f, res_F,\
 	 res_G, res_H, j_tv, n_iter = n_iter)
+
+	#GPU
+	MSSeg = GPUChambolle(u, p, q, tau, sigma, theta, rho, f, n_iter = n_iter, eps = 1e-6)
+	u_s = MSSeg.run()
 
 	#Assign a color to each of the refframes
 	cmaps = get_cmap(nK+1)
