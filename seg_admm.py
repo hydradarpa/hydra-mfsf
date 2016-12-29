@@ -38,10 +38,9 @@ def chambolle(x, y, z, tau, sigma, theta, K, K_star, f, res_F, res_G, res_H, j_t
 		print('%d\t%e\t%e\t%e\t%e'%(n, err, ju, fu, obj))
 		if (err < eps) and (n > 0):
 			break
-		z = res_H(z + sigma*x_bar)
 		x_old = x.copy()
 		y = res_F(y + sigma*K(x_bar))
-		x = res_G(x - tau*(K_star(y)+z+f))
+		x = res_G(x - tau*(K_star(y)+f))
 		x_bar = x + theta*(x - x_old)
 	return x
 
@@ -74,6 +73,58 @@ def project_balls(p):
 		pt[:,:,:,i,:] = pt[:,:,:,i,:]/d
 	p = np.transpose(pt, (0,1,3,2,4))
 	return p 
+
+def ADMM_glasso(u, sigma, rho, n_iter = 100):
+	eps_abs = 1e-6;
+	eps_rel = 1e-3;
+	nr_p = np.inf 
+	nr_d = np.inf 
+	e_p = 0 
+	e_d = 0
+	
+	sz_p = np.prod(u.shape)
+	sz_d = sz_p
+
+	#Set ICs to zeros 
+	Lambda = np.zeros(u.shape)
+	v = u.copy()
+	gamma = 1.0
+
+	n = 0
+	print("\titer:\t nr_p:\teps_p:\tnr_d:\teps_d")
+	while (nr_p > e_p or nr_d > e_d) and (n < n_iter):
+		print("\t%d\t%f\t%f\t%f\t%f"%(n, nr_p, e_p, nr_d, e_d))
+		u_new = project_simplex((2*u+gamma*v-Lambda)/(2+gamma))
+		v_new = group_LASSO(u_new+Lambda/gamma, rho/2/gamma)
+		Lambda_new = Lambda + gamma*(u_new-v_new)
+
+		#Compute convergence criteria
+		r_p = u_new - v_new
+		r_d = gamma*(v - v_new)
+		e_p = np.sqrt(sz_p)*eps_abs + eps_rel*max(np.linalg.norm(u_new), np.linalg.norm(v_new))
+		e_d = np.sqrt(sz_d)*eps_abs + eps_rel*np.linalg.norm(Lambda)
+		nr_p = np.linalg.norm(r_p)
+		nr_d = np.linalg.norm(r_d)
+		
+		#Heuristics to adjust dual gradient ascent rate to balance primal and
+		#dual convergence
+		if (nr_p > 10*nr_d):
+		    gamma = 2.*gamma
+		elif nr_d > 10*nr_p:
+		    gamma = gamma/2.
+		
+		#Update
+		u = u_new
+		v = v_new
+		Lambda = Lambda_new
+		n += 1
+
+	if n >= n_iter:
+		print "\tADMM did not converge; reachced max iterations"
+	else:
+		print "\tADMM converged with:\n%d\t%f\t%f\t%f\t%f"%(n, nr_p, e_p, nr_d, e_d)
+
+	return u 
 
 def project_simplex(u):
 	(ny, nx, k, l) = u.shape
@@ -108,14 +159,14 @@ def group_LASSO(u, rho):
 	for i in range(k):
 		ui = u[:,:,i,:]
 		n = np.sqrt(np.sum(ui*ui))
-		print n 
+		#print n 
 		if n > 0:
 			prox[:,:,i,:] = softmax(n, rho)*ui/n
 	return prox
 
 def mumford_glasso(path_in, iframes, refframes, l = 5, r = 1e6):
 	l = 1e-5
-	r = 1e-5
+	r = 1
 
 	#Params from [1]
 	theta = 1
@@ -135,7 +186,7 @@ def mumford_glasso(path_in, iframes, refframes, l = 5, r = 1e6):
 
 	nK = len(refframes)
 	nL = len(iframes)
-	ny = nx = 256 
+	ny = nx = 128 
 
 	dr = path_in + './glasso_viz/'
 	if not os.path.exists(dr):
@@ -144,7 +195,8 @@ def mumford_glasso(path_in, iframes, refframes, l = 5, r = 1e6):
 	#Generate resolvents and such
 	#res_F = project_balls_intersect
 	res_F = project_balls
-	res_G = project_simplex
+	#res_G = project_simplex
+	res_G = lambda x: ADMM_glasso(x, sigma, rho)
 	res_H = lambda x: group_LASSO(x, rho)
 	K = lambda x: grad(x, h)
 	K_star = lambda x: -div(x, h)
@@ -170,7 +222,7 @@ def mumford_glasso(path_in, iframes, refframes, l = 5, r = 1e6):
 	q = res_H(u)
 
 	#Run chambolle algorithm
-	n_iter = 10
+	n_iter = 20
 
 	#CPU
 	u_s_cpu = chambolle(u, p, q, tau, sigma, theta, K, K_star, f, res_F,\

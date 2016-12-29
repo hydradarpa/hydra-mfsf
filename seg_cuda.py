@@ -62,7 +62,7 @@ class GPUChambolle:
 		    if (g == 0)
 		    {
 			    if (i < width-1) {
-			    	idx2 = str_w*(i+1)+str_h*(j)+str_k*k+l;
+			    	idx2 = str_w*(i+1)+str_h*j+str_k*k+l;
 			    	ret = x[idx2] - x[idx];
 			    } else {
 			    	ret = 0.0;
@@ -96,50 +96,51 @@ class GPUChambolle:
 		    float ret = 0;
 
 		    if (i > 0) {
-		    	ret = y[idxx2] - y[idxx1];
+		    	ret = (y[idxx2] - y[idxx1]);
 		    }
 		    if (j > 0) {
-		    	ret = ret + y[idxy2] - y[idxy1];
+		    	ret = ret + (y[idxy2] - y[idxy1]);
 		    }
 		    return ret;
 		}
 
 		//Simple merge sort implementation
-		__device__ void merging(int low, int mid, int high, float *a, float *b)
+		__device__ void merging(int low, int mid, int high, float *a, float *b, int thr)
 		{
+			int nK = {{ nK }};
 			int l1, l2, i;
    			for(l1 = low, l2 = mid + 1, i = low; l1 <= mid && l2 <= high; i++) {
-   				if(a[l1] <= a[l2])
-   			    	b[i] = a[l1++];
+   				if(a[thr*nK + l1] <= a[thr*nK + l2])
+   			    	b[thr*nK + i] = a[thr*nK + l1++];
    			    else
-   			    	b[i] = a[l2++];
+   			    	b[thr*nK + i] = a[thr*nK + l2++];
    			}
    			
    			while(l1 <= mid)    
-   				b[i++] = a[l1++];
+   				b[thr*nK + i++] = a[thr*nK + l1++];
 			
    			while(l2 <= high)   
-   				b[i++] = a[l2++];
+   				b[thr*nK + i++] = a[thr*nK + l2++];
 			
    			for(i = low; i <= high; i++)
-   				a[i] = b[i];
+   				a[thr*nK + i] = b[thr*nK + i];
 		}
 		
-		__device__ void sort(int low, int high, float *a, float *b)
+		__device__ void sort(int low, int high, float *a, float *b, int thr)
 		{
 			int mid;
 			
 			if(low < high) {
 				mid = (low + high) / 2;
-				sort(low, mid, a, b);
-				sort(mid+1, high, a, b);
-				merging(low, mid, high, a, b);
+				sort(low, mid, a, b, thr);
+				sort(mid+1, high, a, b, thr);
+				merging(low, mid, high, a, b, thr);
 			} else { 
 				return;
 			}   
 		}
 
-		__device__ void unitsimplex(float *ax, int nK, float *rx)
+		__device__ void unitsimplex(float *ax, int nK, float *rx, int thr)
 		{
 			if (nK == 1) { rx[0] = 1; return; }
 			float uv[{{nK}}];
@@ -155,7 +156,7 @@ class GPUChambolle:
 			for (int k = 0; k < nK; k++) {
 				uv[k] = ax[k];
 			}
-			sort(0, nK, uv, b);
+			sort(0, nK+1, uv, b, thr);
 			for (int k = nK; k > 0; k--) {
 				uvr[nK-k] = uv[k-1];
 			}
@@ -262,22 +263,17 @@ class GPUChambolle:
 		        output[blockIdx.x] = partialSum[t];
 		    }
 		}
-	
-		//self.cuda_seg.prepared_call(grid_dimensions, block_dimensions,\
-		//	x_old_gpu.gpudata, x_gpu.gpudata, x_bar_gpu.gpudata,\
-		//	y_gpu.gpudata, z_gpu.gpudata, f_gpu.gpudata,\
+		
+		//self.cuda_unitball.prepared_call(grid_dimensions, block_dimensions,\
+		//	x_bar_gpu.gpudata, y_gpu.gpudata, output_y_gpu.gpudata,\
 		//	np.uint32(nElements), np.uint32(self.width), np.uint32(self.height),\
 		//	np.uint32(self.nK), np.uint32(self.nL))
 
-		__global__ void segmentation(float *x_old, float *xa, float *x_bar, float *y,
-			float *z, float *f, int nElements, int width, int height, int nK, int nL)
-		{
-		    int globt = blockIdx.x*blockDim.x + threadIdx.x;
-		    //unsigned int t = threadIdx.x;
+		__global__ void unitball(float *x_bar, float *y, float *y_out, int nElements,
+			int width, int height, int nK, int nL)
+			{
 
-		    unsigned int str_w = height*nK*nL;
-		    unsigned int str_h = nK*nL;
-		    unsigned int str_k = nL;
+		    int globt = blockIdx.x*blockDim.x + threadIdx.x;
 
    		    unsigned int strp_w = 2*height*nK*nL;
 		    unsigned int strp_h = 2*nK*nL;
@@ -285,19 +281,11 @@ class GPUChambolle:
 		    unsigned int strp_k = nL;
 
 		    float sigma = {{ sigma }};
-		    float tau = {{ tau }};
-		    float theta = {{ theta }};
 
-		    int idx;
 		    int idxp;
 			float ay[2];
 			float norm;
 			float d;
-			float ax[{{nK}}];
-			float rx[{{nK}}];
-
-			float yold[2];
-			float ynew[2];
 
 		    if (globt < nElements) {
 		    	//Compute the pixel coordinates
@@ -306,16 +294,6 @@ class GPUChambolle:
 
 	    		for (int l = 0; l < nL; l++)
 	    		{
-
-	    			/////////////
-					//x_old = x//
-	    			for (int k = 0; k < nK; k++) {
-	    				idx = str_w*i+str_h*j+str_k*k+l;
-	    				x_old[idx] = xa[idx];
-	    				//xa[idx] = 0;
-	    				//printf("x_old[idx] = %f, xa[idx] = %f\\n", x_old[idx], xa[idx]);
-	    			}
-	    			
 	    			///////////////////////////////////////
 					//y = unitball(y + sigma*grad(x_bar))//
 	    			
@@ -335,42 +313,131 @@ class GPUChambolle:
 		    			}
 	    				for (int g = 0; g < 2; g++){
 		    				idxp = strp_w*i+strp_h*j+strp_g*g+strp_k*k+l;
-		    				yold[g] = y[idxp];
-		    				y[idxp] = ay[g]/d;
-		    				ynew[g] = y[idxp];
+		    				//yold[g] = y[idxp];
+		    				y_out[idxp] = ay[g]/d;
+		    				//ynew[g] = y[idxp];
 	    				}
 					    if ((globt >= 0) && (k == 3) && (l == 3)) {
 					    	//printf("(%d,%d) norm: %f, d: %f, yold1: %f, yold2: %f, ynew1: %f, ynew2: %f\\n", i, j, norm, d, yold[0], yold[1], ynew[0], ynew[1]);
 					    	//printf("pixel i: %d, j: %d\\n", i, j);
 					    }
 	    			}
+			    }
+			}
+		}
 
+		//self.cuda_unitsimplex.prepared_call(grid_dimensions, block_dimensions,\
+		//	x_gpu.gpudata, output_y_gpu.gpudata, z_gpu.gpudata, f_gpu.gpudata,\
+		//	output_x_gpu.gpudata, np.uint32(nElements), np.uint32(self.width), np.uint32(self.height),\
+		//	np.uint32(self.nK), np.uint32(self.nL))
+
+		__global__ void project_unitsimplex(float *x, float *y, float *z, float *f,
+			float *x_out, int nElements, int width, int height, int nK, int nL)
+		{
+		    int globt = blockIdx.x*blockDim.x + threadIdx.x;
+		    int thr = threadIdx.x;
+
+		    unsigned int str_w = height*nK*nL;
+		    unsigned int str_h = nK*nL;
+		    unsigned int str_k = nL;
+
+		    float tau = {{ tau }};
+
+		    int idx, kj;
+		    float tmp;
+			__shared__ float ax[{{nK}}*{{block_size}}];
+			__shared__ float rx[{{nK}}*{{block_size}}];
+			__shared__ float uv[{{nK}}*{{block_size}}];
+			__shared__ float vv[{{nK}}*{{block_size}}];
+			__shared__ float uvr[{{nK}}*{{block_size}}];
+			
+		    if (globt < nElements) {
+		    	//Compute the pixel coordinates
+		    	unsigned int i = globt/height;
+	    		unsigned int j = globt-i*height;
+
+	    		for (int l = 0; l < nL; l++)
+	    		{
 					/////////////////////////////////////////
 					//x = unitsimplex(x - tau*(div(y)+z+f))//
 					for (int k = 0; k < nK; k++) {
 	    				idx = str_w*i+str_h*j+str_k*k+l;
-						ax[k] = xa[idx] - tau * (divergence(y,i,j,k,l,width,height,nK,nL)+z[idx]+f[idx]);
+						ax[thr*nK + k] = x[idx] - tau * (divergence(y,i,j,k,l,width,height,nK,nL)+z[idx]+f[idx]);
 					}
 
-					unitsimplex(ax, nK, rx);
+					//unitsimplex(ax, nK, rx, thr);
 					
+					//Unit simplex code is here instead...
+					if (nK == 1)
+					{
+						rx[0] = 1;
+					}
+					else
+					{
+						float uvc = 0;
+						int rho = 0;
+						float uvs = 0;
+						float lambda;
+						float simpl;
+						for (int k = 0; k < nK; k++) {
+							uv[thr*nK + k] = ax[thr*nK + k];
+						}
+
+						//Merge sort 
+						//sort(0, nK, uv, b, thr);
+
+						//Just use insertion sort instead...
+						//for i = 1 to length(A)
+    					//	j = i
+    					//	while j > 0 and A[j-1] > A[j]
+    					//	    swap A[j] and A[j-1]
+    					//	    j = j - 1
+    					//	end while
+						//end for
+						for (int k = 0; k < nK; k++) {
+							kj = k;
+							while ((kj > 0) && (uv[thr*nK + kj-1] > uv[thr*nK + kj])) {
+								//Swap 
+								tmp = uv[thr*nK + kj];
+								uv[thr*nK+kj] = uv[thr*nK+kj-1];
+								uv[thr*nK+kj-1] = tmp;
+								kj--;
+							}
+						}
+
+
+						for (int k = nK; k > 0; k--) {
+							uvr[thr*nK + nK-k] = uv[thr*nK + k-1];
+						}
+						for (int k = 0; k < nK; k++) {
+							uvc = uvc + uvr[thr*nK + k];
+							vv[thr*nK + k] = uvr[thr*nK + k] + 1/float(k+1) - uvc/float(k+1);
+							if (vv[thr*nK + k] > 0)
+								rho = k;
+						}
+						for (int k = 0; k < rho+1; k++) {
+							uvs = uvs + uvr[thr*nK + k];
+						}
+						lambda = (1 - uvs)/float(rho + 1);
+						for (int k = 0; k < nK; k++) {
+							simpl = ax[thr*nK + k] + lambda;
+							if (simpl > 0)
+								rx[thr*nK + k] = simpl;
+							else
+								rx[thr*nK + k] = 0;
+						}
+					}	
+
 					for (int k = 0; k < nK; k++) {
 	    				idx = str_w*i+str_h*j+str_k*k+l;
-	    				xa[idx] = rx[k];
+	    				x_out[idx] = rx[thr*nK + k];
 					}
-					
-					/////////////////////////////////
-					//x_bar = x + theta*(x - x_old)//
-	    			for (int k = 0; k < nK; k++) {
-	    				idx = str_w*i+str_h*j+str_k*k+l;
-			    		x_bar[idx] = xa[idx] + theta*(xa[idx] - x_old[idx]);
-			    	}	
-			    	/*
-			    	*/
+			    }
+			    if ((globt >= 0)) {
+			    	//printf("(%d,%d) ax: %d, rx: %d\\n", i, j, ax, rx);
 			    }
 			}
 		}
-		
 
 		//self.cuda_err.prepared_call(grid_dimensions, block_dimensions,\
 		//	x_gpu.gpudata, x_old_gpu.gpudata, f_gpu.gpudata,\
@@ -388,8 +455,6 @@ class GPUChambolle:
 		    __shared__ float partialSum_j[2*{{ block_size }}];
 		    __shared__ float partialSum_f[2*{{ block_size }}];
 		    __shared__ float partialSum_e[2*{{ block_size }}];
-
-		    float sigma = {{ sigma }};
 
 		    int globalThreadId = blockIdx.x*blockDim.x + threadIdx.x;
 		    unsigned int t = threadIdx.x;
@@ -484,10 +549,15 @@ class GPUChambolle:
 
 		self.cuda_err = cuda_module.get_function("error")
 		self.cuda_glasso = cuda_module.get_function("glasso")
-		self.cuda_seg = cuda_module.get_function("segmentation")
+		#self.cuda_seg = cuda_module.get_function("segmentation")
 		self.cuda_err.prepare("PPPPPPiiiii")
 		self.cuda_glasso.prepare("PPPiiiiii")
-		self.cuda_seg.prepare("PPPPPPiiiii")
+		#self.cuda_seg.prepare("PPPPPPiiiii")
+
+		self.cuda_unitball = cuda_module.get_function("unitball")
+		self.cuda_unitsimplex = cuda_module.get_function("project_unitsimplex")
+		self.cuda_unitball.prepare("PPPiiiii")
+		self.cuda_unitsimplex.prepare("PPPPPiiiii")
 
 		#self.cuda_test = cuda_module.get_function("hello")
 		#self.cuda_test.prepare("PP")
@@ -507,32 +577,26 @@ class GPUChambolle:
 		z_gpu = gpuarray.to_gpu(self.z)
 		f_gpu = gpuarray.to_gpu(self.f)
 
+		x = self.x 
+		x_old = self.x.copy()
+
+		output_y = np.zeros(self.y.shape, dtype=np.float32)
+		output_y_gpu = gpuarray.to_gpu(output_y)
+		output_x = np.zeros(self.x.shape, dtype=np.float32)
+		output_x_gpu = gpuarray.to_gpu(output_x)
+
 		#The main loop runs on the CPU, since global synchronizations are difficult...
 		#So for the moment this is the simplest way of implementing the algorithm
 		print('====================================================================\nIter:\tdX:\t\tJ(u):\t\tf:\t\tPrimal objective:')
 		for n in range(self.n_iter):
 			######################################
-			##Compute errors and such on the GPU##
+			##Compute errors and such on the CPU##
 			######################################
-			ps_err = np.zeros((nBlocks,1), dtype=np.float32)
-			ps_err_gpu = gpuarray.to_gpu(ps_err)
-			ps_ju = np.zeros((nBlocks,1), dtype=np.float32)
-			ps_ju_gpu = gpuarray.to_gpu(ps_ju)
-			ps_fu = np.zeros((nBlocks,1), dtype=np.float32)
-			ps_fu_gpu = gpuarray.to_gpu(ps_fu)
-			self.cuda_err.prepared_call(grid_dimensions, block_dimensions,\
-				x_gpu.gpudata, x_old_gpu.gpudata, f_gpu.gpudata,\
-				ps_err_gpu.gpudata, ps_ju_gpu.gpudata, ps_fu_gpu.gpudata,\
-				np.uint32(nElements), np.uint32(self.width), np.uint32(self.height),\
-				np.uint32(self.nK), np.uint32(self.nL))
-			cuda_driver.Context.synchronize()
-			ps_err = ps_err_gpu.get()
-			ps_ju = ps_ju_gpu.get()
-			ps_fu = ps_fu_gpu.get() 
-			err = np.sqrt(np.sum(ps_err[0:np.ceil(nBlocks/2.)]))
-			ju = np.sum(ps_ju[0:np.ceil(nBlocks/2.)])
-			fu = np.sum(ps_fu[0:np.ceil(nBlocks/2.)])
-			obj = fu + fu
+
+			err = np.linalg.norm(x-x_old)
+			ju = self.J1(x, 1)
+			fu = np.sum(self.f*x)
+			obj = fu + ju
 
 			print('%d\t%e\t%e\t%e\t%e'%(n, err, ju, fu, obj))
 			if (err < self.eps) and (n > 0):
@@ -557,25 +621,61 @@ class GPUChambolle:
 
 			for k in range(self.nK):
 				ps_norm = ps_norm_gpu[k].get()
-				grp_norm = np.sum(ps_norm[0:np.ceil(nBlocks/2.)])
+				grp_norm = np.sqrt(np.sum(ps_norm[0:np.ceil(nBlocks/2.)]))
 				#Update z
 				if grp_norm > 0:
+					print grp_norm 
 					z[:,:,k,:] = (z[:,:,k,:]+self.sigma*x_bar[:,:,k,:])*softmax(grp_norm, self.rho)/grp_norm
 			#Once finished reupload z to GPU
 			z_gpu = gpuarray.to_gpu(z)
 
+			print np.linalg.norm(z)
+
 			################################
 			##Compute remainder of updates##
 			################################
-			#All of these operations are pixel wise and can run together trivally
-			#on GPU
-			self.cuda_seg.prepared_call(grid_dimensions, block_dimensions,\
-				x_old_gpu.gpudata, x_gpu.gpudata, x_bar_gpu.gpudata,\
-				y_gpu.gpudata, z_gpu.gpudata, f_gpu.gpudata,\
+
+			x_old = x_gpu.get() 
+
+			#y = unitball(y + sigma*grad(x_bar))
+			self.cuda_unitball.prepared_call(grid_dimensions, block_dimensions,\
+				x_bar_gpu.gpudata, y_gpu.gpudata, output_y_gpu.gpudata,\
 				np.uint32(nElements), np.uint32(self.width), np.uint32(self.height),\
 				np.uint32(self.nK), np.uint32(self.nL))
 			cuda_driver.Context.synchronize()
 
+			#x = unitsimplex(x - tau*(div(y)+z+f))
+			self.cuda_unitsimplex.prepared_call(grid_dimensions, block_dimensions,\
+				x_gpu.gpudata, output_y_gpu.gpudata, z_gpu.gpudata, f_gpu.gpudata,\
+				output_x_gpu.gpudata, np.uint32(nElements), np.uint32(self.width), np.uint32(self.height),\
+				np.uint32(self.nK), np.uint32(self.nL))
+			cuda_driver.Context.synchronize()
+
+			x = output_x_gpu.get() 
+			y = output_y_gpu.get()
+			x_bar = x + theta*(x - x_old)
+
+			#Reupload changes
+			#x_gpu = output_x_gpu 
+			#y_gpu = output_y_gpu 
+			x_bar_gpu = gpuarray.to_gpu(x_bar) 
+			x_gpu = gpuarray.to_gpu(x)
+			y_gpu = gpuarray.to_gpu(y)
+
 		u_s = x_gpu.get()
 
 		return u_s
+
+	def J1(self, x, h):
+		return np.sum(np.linalg.norm(self.grad(x,h), axis = 2))
+
+	def grad(self, u, h):
+		k = u.shape[2]
+		l = u.shape[3]
+		p = np.zeros((u.shape[0], u.shape[1], 2, k, l))
+		for j in range(l):
+			for i in range(k):
+				p[0:-1, :, 0, i, j] = (u[1:, :, i, j] - u[0:-1, :, i, j])/h
+				p[:, 0:-1, 1, i, j] = (u[:, 1:, i, j] - u[:, 0:-1, i, j])/h
+		return p 
+
