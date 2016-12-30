@@ -166,9 +166,20 @@ def group_LASSO(u, rho):
 			prox[:,:,i,:] = softmax(n, rho)*ui/n
 	return prox
 
-def mumford_glasso(path_in, iframes, refframes, l = 5, r = 1e6):
-	l = 1e-4
-	r = 1e-4
+def mumford_glasso(path_in, iframes, refframes, l = 1e-3, r = 1e-4):
+	#l = 1e-4
+	#r = 1e-4
+
+	#Test params
+	#path_in = './register/20160412stk0001-0008/'
+	#iframes = [1, 501, 1001, 1501]
+	#refframes = [1, 501]
+	#iframes = [1, 501]
+	#refframes = [1, 501]
+
+	#path_in = './register/jellyfish/'
+	#iframes = [1, 2, 3, 4]
+	#refframes = [1, 3]
 
 	#Params from [1]
 	theta = 1
@@ -184,17 +195,6 @@ def mumford_glasso(path_in, iframes, refframes, l = 5, r = 1e6):
 	radius = 10
 	#Displacement scores above this will be encouraged to be labeled occluded
 	occlusion_score = 30	#(in pixels)
-
-	#Test params
-	#path_in = './register/20160412stk0001-0008/'
-	#iframes = [1, 501, 1001, 1501]
-	#refframes = [1, 501]
-	#iframes = [1, 501]
-	#refframes = [1, 501]
-
-	path_in = './register/jellyfish/'
-	iframes = [1, 2, 3, 4]
-	refframes = [1, 3]
 
 	nK = len(refframes)
 	nL = len(iframes)
@@ -256,25 +256,6 @@ def mumford_glasso(path_in, iframes, refframes, l = 5, r = 1e6):
 				for j in np.setdiff1d(np.arange(nK), np.array([k])):
 					f[xs,ys,j,l] = self_score
 
-	#Alternatively, we can just introduce a negative matching error. Though this introduces a non-convexity, I
-	#believe... so this is a bad idea
-	#for l in range(nL):
-	#	for k in range(nK):
-	#		if l != k:
-	#			#Load error terms
-	#			fn_matches = path_in + 'corrmatrix/%04d_%04d.txt'%(refframes[k], iframes[l])
-	#			#Load matches
-	#			#x1 y1   x2   y2   score   ?
-	#			#8  632  892  716  5.65289 0
-	#			with open(fn_matches, 'r') as f_matches:
-	#				for line in f_matches:
-	#					(x1, y1, x2, y2, score) = [float(x) for x in line.split()[0:5]]
-	#					(x1, y1, x2, y2) = (x1/nx_in*nx, y1/ny_in*ny, x2/nx_in*nx, y2/ny_in*ny)
-	#					f[int(y2),int(x2),k,l] = -score
-	#		else:
-	#			xs,ys = np.meshgrid(np.arange(0, nx, pitch), np.arange(0, ny, pitch))
-	#			f[xs,ys,k,l] = -self_score
-
 	for l in range(nL):
 		for k in range(nK):
 			#Filter scores to smooth a little.
@@ -287,7 +268,7 @@ def mumford_glasso(path_in, iframes, refframes, l = 5, r = 1e6):
 	q = res_H(u)
 
 	#Run chambolle algorithm
-	n_iter = 40
+	n_iter = 100
 
 	#CPU
 	u_s_cpu = chambolle(u, p, q, tau, sigma, theta, K, K_star, f, res_F,\
@@ -302,20 +283,6 @@ def mumford_glasso(path_in, iframes, refframes, l = 5, r = 1e6):
 	cm = np.zeros((nK,3))
 	for k in range(nK):
 		cm[k,:] = cmaps(k)
-
-	#for l in range(nL):
-	#	#Load the image for each iframe
-	#	iframe_fn = path_in + 'refframes/frame_%04d.png'%(iframes[l])
-	#	img = cv2.imread(iframe_fn)
-	#	img = cv2.resize(img, (ny, nx))
-	#	#Take argmax of u tensor to obtain segmented image
-	#	ms_img = np.zeros(img.shape, dtype = np.uint8)
-	#	for i in range(ny):
-	#		for j in range(nx):
-	#			col = np.argmax(u_s[i,j,:,l])
-	#			ms_img[i,j,:] = cm[col,:]
-	#	dst = cv2.addWeighted(img,0.7,ms_img,0.3,0)
-	#	cv2.imwrite('%siframe_%d_MS_lambda_%.02e_niter_%04d.png'%(dr,l,lmda,n_iter), dst)
 
 	for l in range(nL):
 		#Load the image for each iframe
@@ -333,8 +300,20 @@ def mumford_glasso(path_in, iframes, refframes, l = 5, r = 1e6):
 		for k in range(nK):
 			ctr = (5, k*10+5)
 			cv2.circle(dst, ctr, 3, cm[k,:], -1)
-
-		#cv2.imwrite('%scpu_iframe_%d_MS_lambda_%.02e_niter_%04d.png'%(dr,l,lmda,n_iter), dst)
 		cv2.imwrite('%scpu_iframe_%d_MS_lambda_%.02e_niter_%04d.png'%(dr,l,lmda,n_iter), dst)
 
 	return u_s
+
+if __name__ == '__main__':
+	parser = argparse.ArgumentParser()
+	parser.add_argument('path_in', help='input directory with frames already placed in it')
+	parser.add_argument('--rframes', help='list of global reference frames. Provide as list of integers (e.g. 1,2,3,4)', type = str)
+	parser.add_argument('--iframes', help='list of intermediate iframes. Provide as list of integers (e.g. 1,2,3,4)', type = str)
+	parser.add_argument('-l', help='lambda: TV regularization weight (smaller = more regularization)', default=1e-4, type = float)
+	parser.add_argument('-r', help='rho: group LASSO regularization weight (larger = more regularization)', default = 1e-3, type = float)
+	args = parser.parse_args()
+
+	iframes = [int(i) for i in args.iframes.split('.')]
+	refframes = [int(i) for i in args.rframes.split('.')]
+
+	mumford_glasso(path_in, iframes, refframes, l = args.l, r = args.r)
