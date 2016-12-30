@@ -37,13 +37,16 @@ Ben Lansdell
 	class Args:
 		pass 
 	args = Args()
-	args.path_in = './register/20160412stk0001-0008/'
-	args.rframes = ['frame_0001.tif', 'frame_0501.tif', 'frame_1001.tif', 'frame_1501.tif']
+	args.path_in = './register/jellyfish/'
+	args.rframes = ['frame_0001.jpg', 'frame_0003.jpg']
 
 	#Get all files in 
 	iframes = sorted(glob(args.path_in + 'refframes/*'))
 	nF = len(iframes)
 	nR = len(args.rframes)
+
+	ext = 'jpg'
+	downscale = 2 
 
 	#Find indices of rframes in iframes list
 	rframeidx = [iframes.index(args.path_in + 'refframes/' + rf) for rf in args.rframes]
@@ -66,7 +69,7 @@ Ben Lansdell
 	for r in range(nR):
 		i = rframeidx[r]
 		im1 = iframes[i]
-		#Get frame number 
+		#Get frame number
 		fn1 = int(os.path.splitext(os.path.basename(im1))[0].split('_')[1])
 		for j in range(nF):
 			if i != j:
@@ -74,19 +77,19 @@ Ben Lansdell
 				fn2 = int(os.path.splitext(os.path.basename(im2))[0].split('_')[1])
 				print("DeepMatching between frame %d and %d" %(fn1, fn2))
 				fn_out = args.path_in + 'corrmatrix/%04d_%04d.txt'%(fn1,fn2)
-				os.system('python %s %s %s -ds 2 -out %s' %(DM, im1, im2, fn_out)) 
+				os.system('python %s %s %s -ds %d -out %s' %(DM, im1, im2, downscale, fn_out)) 
 
 	#Run DeepFlow
 	for r in range(nR):
 		i = rframeidx[r]
 		im1 = iframes[i]
-		im1 = im1[0:-3] + 'png'
+		im1 = im1[0:-3] + ext
 		#Get frame number 
 		fn1 = int(os.path.splitext(os.path.basename(im1))[0].split('_')[1])
 		for j in range(nF):
 			if i != j:
 				im2 = iframes[j]
-				im2 = im2[0:-3] + 'png'
+				im2 = im2[0:-3] + ext
 				fn2 = int(os.path.splitext(os.path.basename(im2))[0].split('_')[1])
 				print("DeepFlow between frame %d and %d" %(fn1, fn2))
 				fn_out = args.path_in + 'corrmatrix/%04d_%04d.flo'%(fn1,fn2)

@@ -13,6 +13,8 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cmx
 import matplotlib.colors as colors
 
+import scipy.ndimage 
+
 def get_cmap(N):
     '''Returns a function that maps each index in 0, 1, ... N-1 to a distinct 
     RGB color.'''
@@ -109,9 +111,9 @@ def ADMM_glasso(u, sigma, rho, n_iter = 100):
 		#Heuristics to adjust dual gradient ascent rate to balance primal and
 		#dual convergence
 		if (nr_p > 10*nr_d):
-		    gamma = 2.*gamma
+		    gamma = 1.5*gamma
 		elif nr_d > 10*nr_p:
-		    gamma = gamma/2.
+		    gamma = gamma/1.5
 		
 		#Update
 		u = u_new
@@ -165,8 +167,8 @@ def group_LASSO(u, rho):
 	return prox
 
 def mumford_glasso(path_in, iframes, refframes, l = 5, r = 1e6):
-	l = 1e-5
-	r = 1
+	l = 1e-4
+	r = 1e-4
 
 	#Params from [1]
 	theta = 1
@@ -177,16 +179,31 @@ def mumford_glasso(path_in, iframes, refframes, l = 5, r = 1e6):
 	lmda = l
 	rho = r 				#Need to experiment with good values for rho...
 
+	self_score = 9
+	pitch = 5 
+	radius = 10
+	#Displacement scores above this will be encouraged to be labeled occluded
+	occlusion_score = 30	#(in pixels)
+
 	#Test params
-	path_in = './register/20160412stk0001-0008/'
-	iframes = [1, 501, 1001, 1501]
-	refframes = [1, 501]
+	#path_in = './register/20160412stk0001-0008/'
+	#iframes = [1, 501, 1001, 1501]
+	#refframes = [1, 501]
 	#iframes = [1, 501]
 	#refframes = [1, 501]
+
+	path_in = './register/jellyfish/'
+	iframes = [1, 2, 3, 4]
+	refframes = [1, 3]
 
 	nK = len(refframes)
 	nL = len(iframes)
 	ny = nx = 128 
+
+	ext = 'jpg'
+	iframe_fn = path_in + 'refframes/frame_%04d.%s'%(iframes[0], ext)
+	img = cv2.imread(iframe_fn)
+	ny_in, nx_in = img.shape[0:2]
 
 	dr = path_in + './glasso_viz/'
 	if not os.path.exists(dr):
@@ -204,17 +221,65 @@ def mumford_glasso(path_in, iframes, refframes, l = 5, r = 1e6):
 
 	#Generate set of images, f^{kl}, that are the error measures for each pixel
 	f = np.zeros((ny, nx, nK, nL))
-	#Here we load data from optic flow errors
+	
+	##Here we load data from optic flow errors
+	#for l in range(nL):
+	#	for k in range(nK):
+	#		if refframes[k] != iframes[l]:
+	#			#Load error terms
+	#			fn_err = path_in + 'corrmatrix/%04d_%04d_deepflow_err.npz'%(refframes[k], iframes[l])
+	#			err = np.load(fn_err)['fwderr']
+	#			#Resize
+	#			err = cv2.resize(err, (ny, nx))
+	#			f[:,:,k,l] = lmda*err/2
+	#			#Or should this be squared??
+
+	#Instead we can load the deep matching results
+	#For each match between ref frame and iframes, we add the match as a penalty
+	#in all the other frames that are not the refframe.
 	for l in range(nL):
 		for k in range(nK):
-			if l != k:
+			if refframes[k] != iframes[l]:
 				#Load error terms
-				fn_err = path_in + 'corrmatrix/%04d_%04d_deepflow_err.npz'%(refframes[k], iframes[l])
-				err = np.load(fn_err)['fwderr']
-				#Resize
-				err = cv2.resize(err, (ny, nx))
-				f[:,:,k,l] = lmda*err/2
-				#Or should this be squared??
+				fn_matches = path_in + 'corrmatrix/%04d_%04d.txt'%(refframes[k], iframes[l])
+				#Load matches
+				#x1 y1   x2   y2   score   ?
+				#8  632  892  716  5.65289 0
+				with open(fn_matches, 'r') as f_matches:
+					for line in f_matches:
+						(x1, y1, x2, y2, score) = [float(x) for x in line.split()[0:5]]
+						(x1, y1, x2, y2) = (x1/nx_in*nx, y1/ny_in*ny, x2/nx_in*nx, y2/ny_in*ny)
+						for j in np.setdiff1d(np.arange(nK), np.array([k])):
+							f[int(y2),int(x2),j,l] = score
+			else:
+				xs,ys = np.meshgrid(np.arange(0, nx, pitch), np.arange(0, ny, pitch))
+				for j in np.setdiff1d(np.arange(nK), np.array([k])):
+					f[xs,ys,j,l] = self_score
+
+	#Alternatively, we can just introduce a negative matching error. Though this introduces a non-convexity, I
+	#believe... so this is a bad idea
+	#for l in range(nL):
+	#	for k in range(nK):
+	#		if l != k:
+	#			#Load error terms
+	#			fn_matches = path_in + 'corrmatrix/%04d_%04d.txt'%(refframes[k], iframes[l])
+	#			#Load matches
+	#			#x1 y1   x2   y2   score   ?
+	#			#8  632  892  716  5.65289 0
+	#			with open(fn_matches, 'r') as f_matches:
+	#				for line in f_matches:
+	#					(x1, y1, x2, y2, score) = [float(x) for x in line.split()[0:5]]
+	#					(x1, y1, x2, y2) = (x1/nx_in*nx, y1/ny_in*ny, x2/nx_in*nx, y2/ny_in*ny)
+	#					f[int(y2),int(x2),k,l] = -score
+	#		else:
+	#			xs,ys = np.meshgrid(np.arange(0, nx, pitch), np.arange(0, ny, pitch))
+	#			f[xs,ys,k,l] = -self_score
+
+	for l in range(nL):
+		for k in range(nK):
+			#Filter scores to smooth a little.
+			im = f[:,:,k,l]
+			f[:,:,k,l] = scipy.ndimage.filters.gaussian_filter(im, radius)
 
 	#Init u, p
 	u = res_G(np.zeros((ny, nx, nK, nL)))
@@ -222,7 +287,7 @@ def mumford_glasso(path_in, iframes, refframes, l = 5, r = 1e6):
 	q = res_H(u)
 
 	#Run chambolle algorithm
-	n_iter = 20
+	n_iter = 40
 
 	#CPU
 	u_s_cpu = chambolle(u, p, q, tau, sigma, theta, K, K_star, f, res_F,\
@@ -254,7 +319,7 @@ def mumford_glasso(path_in, iframes, refframes, l = 5, r = 1e6):
 
 	for l in range(nL):
 		#Load the image for each iframe
-		iframe_fn = path_in + 'refframes/frame_%04d.png'%(iframes[l])
+		iframe_fn = path_in + 'refframes/frame_%04d.%s'%(iframes[l], ext)
 		img = cv2.imread(iframe_fn)
 		img = cv2.resize(img, (ny, nx))
 		#Take argmax of u tensor to obtain segmented image
@@ -264,6 +329,12 @@ def mumford_glasso(path_in, iframes, refframes, l = 5, r = 1e6):
 				col = np.argmax(u_s_cpu[i,j,:,l])
 				ms_img[i,j,:] = cm[col,:]
 		dst = cv2.addWeighted(img,0.7,ms_img,0.3,0)
+		#Add circles in bottom left with key
+		for k in range(nK):
+			ctr = (5, k*10+5)
+			cv2.circle(dst, ctr, 3, cm[k,:], -1)
+
+		#cv2.imwrite('%scpu_iframe_%d_MS_lambda_%.02e_niter_%04d.png'%(dr,l,lmda,n_iter), dst)
 		cv2.imwrite('%scpu_iframe_%d_MS_lambda_%.02e_niter_%04d.png'%(dr,l,lmda,n_iter), dst)
 
 	return u_s
