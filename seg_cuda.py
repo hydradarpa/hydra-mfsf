@@ -362,7 +362,7 @@ class GPUChambolle:
 					//x = unitsimplex(x - tau*(div(y)+z+f))//
 					for (int k = 0; k < nK; k++) {
 	    				idx = str_w*i+str_h*j+str_k*k+l;
-						ax[thr*nK + k] = x[idx] - tau * (divergence(y,i,j,k,l,width,height,nK,nL)+z[idx]+f[idx]);
+						ax[thr*nK + k] = x[idx] - tau * (-divergence(y,i,j,k,l,width,height,nK,nL)+z[idx]+f[idx]);
 					}
 
 					//unitsimplex(ax, nK, rx, thr);
@@ -653,7 +653,7 @@ class GPUChambolle:
 
 			x = output_x_gpu.get() 
 			y = output_y_gpu.get()
-			x_bar = x + theta*(x - x_old)
+			x_bar = x + self.theta*(x - x_old)
 
 			#Reupload changes
 			#x_gpu = output_x_gpu 

@@ -135,7 +135,7 @@ def mumford_glasso(path_in, iframes, refframes, l = 5, r = 1e6):
 
 	nK = len(refframes)
 	nL = len(iframes)
-	ny = nx = 256 
+	ny = nx = 256
 
 	dr = path_in + './glasso_viz/'
 	if not os.path.exists(dr):
@@ -170,15 +170,15 @@ def mumford_glasso(path_in, iframes, refframes, l = 5, r = 1e6):
 	q = res_H(u)
 
 	#Run chambolle algorithm
-	n_iter = 10
+	n_iter = 20
 
 	#CPU
-	u_s_cpu = chambolle(u, p, q, tau, sigma, theta, K, K_star, f, res_F,\
-	 res_G, res_H, j_tv, n_iter = n_iter)
+	#u_s_cpu = chambolle(u, p, q, tau, sigma, theta, K, K_star, f, res_F,\
+	# res_G, res_H, j_tv, n_iter = n_iter)
 
 	#GPU
-	#MSSeg = GPUChambolle(u, p, q, tau, sigma, theta, rho, f, n_iter = n_iter, eps = 1e-6)
-	#u_s = MSSeg.run()
+	MSSeg = GPUChambolle(u, p, q, tau, sigma, theta, rho, f, n_iter = n_iter, eps = 1e-6)
+	u_s = MSSeg.run()
 
 	#Assign a color to each of the refframes
 	cmaps = get_cmap(nK+1)
@@ -209,9 +209,9 @@ def mumford_glasso(path_in, iframes, refframes, l = 5, r = 1e6):
 		ms_img = np.zeros(img.shape, dtype = np.uint8)
 		for i in range(ny):
 			for j in range(nx):
-				col = np.argmax(u_s_cpu[i,j,:,l])
+				col = np.argmax(u_s[i,j,:,l])
 				ms_img[i,j,:] = cm[col,:]
 		dst = cv2.addWeighted(img,0.7,ms_img,0.3,0)
-		cv2.imwrite('%scpu_iframe_%d_MS_lambda_%.02e_niter_%04d.png'%(dr,l,lmda,n_iter), dst)
+		cv2.imwrite('%sgpu_iframe_%d_MS_lambda_%.02e_niter_%04d.png'%(dr,l,lmda,n_iter), dst)
 
 	return u_s
