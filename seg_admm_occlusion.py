@@ -194,7 +194,7 @@ def mumford_glasso(path_in, iframes, refframes, l = 1e-3, r = 1e-4, n_iter = 100
 	pitch = 5 
 	radius = 10
 	#Displacement scores above this will be encouraged to be labeled occluded
-	occlusion_score = 30	#(in pixels)
+	occlusion_score = 20	#(in pixels)
 
 	nK = len(refframes)
 	nL = len(iframes)
@@ -205,7 +205,7 @@ def mumford_glasso(path_in, iframes, refframes, l = 1e-3, r = 1e-4, n_iter = 100
 	img = cv2.imread(iframe_fn)
 	ny_in, nx_in = img.shape[0:2]
 
-	dr = path_in + './glasso_viz/'
+	dr = path_in + './glasso_viz_occlusion/'
 	if not os.path.exists(dr):
 	    os.makedirs(dr)
 
@@ -219,7 +219,8 @@ def mumford_glasso(path_in, iframes, refframes, l = 1e-3, r = 1e-4, n_iter = 100
 	j_tv = lambda x: J1(x, h)
 
 	#Generate set of images, f^{kl}, that are the error measures for each pixel
-	f = np.zeros((ny, nx, nK, nL))
+	#The extra (nK+1) is an occluded state
+	f = np.zeros((ny, nx, nK+1, nL))
 	
 	##Here we load data from optic flow errors
 	for l in range(nL):
@@ -233,36 +234,12 @@ def mumford_glasso(path_in, iframes, refframes, l = 1e-3, r = 1e-4, n_iter = 100
 				f[:,:,k,l] = lmda*err/2
 				#Or should this be squared??
 
-	#Instead we can load the deep matching results
-	#For each match between ref frame and iframes, we add the match as a penalty
-	#in all the other frames that are not the refframe.
-	#for l in range(nL):
-	#	for k in range(nK):
-	#		if refframes[k] != iframes[l]:
-	#			#Load error terms
-	#			fn_matches = path_in + 'corrmatrix/%04d_%04d.txt'%(refframes[k], iframes[l])
-	#			#Load matches
-	#			#x1 y1   x2   y2   score   ?
-	#			#8  632  892  716  5.65289 0
-	#			with open(fn_matches, 'r') as f_matches:
-	#				for line in f_matches:
-	#					(x1, y1, x2, y2, score) = [float(x) for x in line.split()[0:5]]
-	#					(x1, y1, x2, y2) = (x1/nx_in*nx, y1/ny_in*ny, x2/nx_in*nx, y2/ny_in*ny)
-	#					for j in np.setdiff1d(np.arange(nK), np.array([k])):
-	#						f[int(y2),int(x2),j,l] = score
-	#		else:
-	#			xs,ys = np.meshgrid(np.arange(0, nx, pitch), np.arange(0, ny, pitch))
-	#			for j in np.setdiff1d(np.arange(nK), np.array([k])):
-	#				f[xs,ys,j,l] = self_score
-
-	#for l in range(nL):
-	#	for k in range(nK):
-	#		#Filter scores to smooth a little.
-	#		im = f[:,:,k,l]
-	#		f[:,:,k,l] = scipy.ndimage.filters.gaussian_filter(im, radius)
+		#This guy is the occlusion state. Errors above this threshold may be labeled as occluded
+		k = nK 
+		f[:,:,k,l] = lmda*occlusion_score/2
 
 	#Init u, p
-	u = res_G(np.zeros((ny, nx, nK, nL)))
+	u = res_G(np.zeros((ny, nx, nK+1, nL)))
 	p = res_F(K(u))
 
 	#Run chambolle algorithm
@@ -276,7 +253,7 @@ def mumford_glasso(path_in, iframes, refframes, l = 1e-3, r = 1e-4, n_iter = 100
 	#u_s = MSSeg.run()
 
 	#Assign a color to each of the refframes
-	cmaps = get_cmap(nK+1)
+	cmaps = get_cmap(nK+2)
 	cm = np.zeros((nK,3))
 	for k in range(nK):
 		cm[k,:] = cmaps(k)
@@ -294,7 +271,7 @@ def mumford_glasso(path_in, iframes, refframes, l = 1e-3, r = 1e-4, n_iter = 100
 				ms_img[i,j,:] = cm[col,:]
 		dst = cv2.addWeighted(img,0.7,ms_img,0.3,0)
 		#Add circles in bottom left with key
-		for k in range(nK):
+		for k in range(nK+1):
 			ctr = (5, k*10+5)
 			cv2.circle(dst, ctr, 3, cm[k,:], -1)
 		cv2.imwrite('%scpu_iframe_%d_MS_lambda_%.02e_rho_%.02e_niter_%04d.png'%(dr,l,lmda,rho,n_iter), dst)
@@ -317,7 +294,7 @@ if __name__ == '__main__':
 	u_s = mumford_glasso(args.path_in, iframes, refframes, l = args.l, r = args.r, n_iter = n_iter)
 
 	#Save the result
-	dr = args.path_in + './seg_admm/'
+	dr = args.path_in + './seg_admm_occlusion/'
 	if not os.path.exists(dr):
 	    os.makedirs(dr)
 	fn_out = '%s/cpu_MS_lambda_%.02e_rho_%.02e_niter_%04d.npz'%(dr,args.l,args.r,n_iter)
