@@ -7,7 +7,7 @@ from os.path import basename
 import os.path 
 import os 
 
-from seg_cuda import *
+from seg_cuda_admm import *
 
 import matplotlib.pyplot as plt
 import matplotlib.cm as cmx
@@ -166,11 +166,12 @@ def group_LASSO(u, rho):
 			prox[:,:,i,:] = softmax(n, rho)*ui/n
 	return prox
 
-def mumford_glasso(path_in, iframes, refframes, l = 1e-3, r = 1e-4, n_iter = 100):
+def mumford_glasso(path_in, iframes, refframes, l = 1e-3, r = 1e-4, n_iter = 100, cpu = False):
 	#l = 1e-4
 	#r = 1e-4
+	#n_iter = 1000
 
-	#Test params
+	##Test params
 	#path_in = './register/20160412stk0001-0008/'
 	#iframes = [1, 501, 1001, 1501]
 	#refframes = [1, 501]
@@ -198,10 +199,10 @@ def mumford_glasso(path_in, iframes, refframes, l = 1e-3, r = 1e-4, n_iter = 100
 
 	nK = len(refframes)
 	nL = len(iframes)
-	ny = nx = 128 
+	ny = nx = 512
 
 	ext = 'png'
-	iframe_fn = path_in + 'refframes/frame_%04d.%s'%(iframes[0], ext)
+	iframe_fn = path_in + '/refframes/frame_%04d.%s'%(iframes[0], ext)
 	img = cv2.imread(iframe_fn)
 	ny_in, nx_in = img.shape[0:2]
 
@@ -212,8 +213,8 @@ def mumford_glasso(path_in, iframes, refframes, l = 1e-3, r = 1e-4, n_iter = 100
 	#Generate resolvents and such
 	#res_F = project_balls_intersect
 	res_F = project_balls
-	#res_G = project_simplex
-	res_G = lambda x: ADMM_glasso(x, sigma, rho)
+	res_G = project_simplex
+	#res_G = lambda x: ADMM_glasso(x, sigma, rho)
 	K = lambda x: grad(x, h)
 	K_star = lambda x: -div(x, h)
 	j_tv = lambda x: J1(x, h)
@@ -266,14 +267,17 @@ def mumford_glasso(path_in, iframes, refframes, l = 1e-3, r = 1e-4, n_iter = 100
 	p = res_F(K(u))
 
 	#Run chambolle algorithm
+	print 'Number of iterations', n_iter
 
 	#CPU
-	u_s_cpu = chambolle(u, p, tau, sigma, theta, K, K_star, f, res_F,\
-	 res_G, j_tv, n_iter = n_iter)
-
-	#GPU
-	#MSSeg = GPUChambolle(u, p, tau, sigma, theta, rho, f, n_iter = n_iter, eps = 1e-6)
-	#u_s = MSSeg.run()
+	if cpu:
+		u_s = chambolle(u, p, tau, sigma, theta, K, K_star, f, res_F,\
+		 res_G, j_tv, n_iter = n_iter)
+	else:
+		#GPU
+		#MSSeg = GPUChambolle(u, p, tau, sigma, theta, rho, f, n_iter = n_iter, eps = 1e-6)
+		MSSeg = GPUChambolle(u, p, tau, sigma, theta, f, n_iter = n_iter, eps = 1e-6)
+		u_s = MSSeg.run()
 
 	#Assign a color to each of the refframes
 	cmaps = get_cmap(nK+1)
@@ -290,16 +294,19 @@ def mumford_glasso(path_in, iframes, refframes, l = 1e-3, r = 1e-4, n_iter = 100
 		ms_img = np.zeros(img.shape, dtype = np.uint8)
 		for i in range(ny):
 			for j in range(nx):
-				col = np.argmax(u_s_cpu[i,j,:,l])
+				col = np.argmax(u_s[i,j,:,l])
 				ms_img[i,j,:] = cm[col,:]
 		dst = cv2.addWeighted(img,0.7,ms_img,0.3,0)
 		#Add circles in bottom left with key
 		for k in range(nK):
 			ctr = (5, k*10+5)
 			cv2.circle(dst, ctr, 3, cm[k,:], -1)
-		cv2.imwrite('%scpu_iframe_%d_MS_lambda_%.02e_rho_%.02e_niter_%04d.png'%(dr,l,lmda,rho,n_iter), dst)
+		if cpu:
+			cv2.imwrite('%scpu_iframe_%d_MS_lambda_%.02e_rho_%.02e_niter_%04d.png'%(dr,l,lmda,rho,args.n_iter), dst)
+		else:
+			cv2.imwrite('%sgpu_iframe_%d_MS_lambda_%.02e_rho_%.02e_niter_%04d.png'%(dr,l,lmda,rho,args.n_iter), dst)
 
-	return u_s_cpu
+	return u_s
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
@@ -308,17 +315,23 @@ if __name__ == '__main__':
 	parser.add_argument('--iframes', help='list of intermediate iframes. Provide as list of integers (e.g. 1,2,3,4)', type = str)
 	parser.add_argument('-l', help='lambda: TV regularization weight (smaller = more regularization)', default=1e-4, type = float)
 	parser.add_argument('-r', help='rho: group LASSO regularization weight (larger = more regularization)', default = 1e-3, type = float)
+	parser.add_argument('-c', dest='cpu', help='cpu: if provided will use CPU instead of GPU', action = 'store_true')
+	parser.add_argument('-n', dest='n_iter', help='max iterations', default = 1000)
+	parser.set_defaults(cpu = False)
 	args = parser.parse_args()
 
 	iframes = [int(i) for i in args.iframes.split(',')]
 	refframes = [int(i) for i in args.rframes.split(',')]
 
-	n_iter = 100
-	u_s = mumford_glasso(args.path_in, iframes, refframes, l = args.l, r = args.r, n_iter = n_iter)
+	#n_iter = 10
+	u_s = mumford_glasso(args.path_in, iframes, refframes, l = args.l, r = args.r, n_iter = args.n_iter, cpu = args.cpu)
 
 	#Save the result
 	dr = args.path_in + './seg_admm/'
 	if not os.path.exists(dr):
 	    os.makedirs(dr)
-	fn_out = '%s/cpu_MS_lambda_%.02e_rho_%.02e_niter_%04d.npz'%(dr,args.l,args.r,n_iter)
+	if args.cpu:
+		fn_out = '%s/cpu_MS_lambda_%.02e_rho_%.02e_niter_%04d.npz'%(dr,args.l,args.r,args.n_iter)
+	else:
+		fn_out = '%s/gpu_MS_lambda_%.02e_rho_%.02e_niter_%04d.npz'%(dr,args.l,args.r,args.n_iter)
 	np.savez(fn_out, u_s = u_s)
