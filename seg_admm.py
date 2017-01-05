@@ -311,8 +311,8 @@ def mumford_glasso(path_in, iframes, refframes, l = 1e-3, r = 1e-4, n_iter = 100
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('path_in', help='input directory with frames already placed in it')
-	parser.add_argument('--rframes', help='list of global reference frames. Provide as list of integers (e.g. 1,2,3,4)', type = str)
-	parser.add_argument('--iframes', help='list of intermediate iframes. Provide as list of integers (e.g. 1,2,3,4)', type = str)
+	parser.add_argument('--rframes', help='list of global reference frames. Provide as list of integers without space (e.g. 1,2,3,4)', type = str)
+	parser.add_argument('--iframes', help='list of intermediate iframes. Provide as list of integers without space (e.g. 1,2,3,4)', type = str)
 	parser.add_argument('-l', help='lambda: TV regularization weight (smaller = more regularization)', default=1e-4, type = float)
 	parser.add_argument('-r', help='rho: group LASSO regularization weight (larger = more regularization)', default = 1e-3, type = float)
 	parser.add_argument('-c', dest='cpu', help='cpu: if provided will use CPU instead of GPU', action = 'store_true')

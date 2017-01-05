@@ -33,17 +33,17 @@ Ben Lansdell
 	args = parser.parse_args()
 
 	#Test code for interactive dev
-	class Args:
-		pass 
-	args = Args()
+	#class Args:
+	#	pass 
+	#args = Args()
 	#args.dir_in = './register/20160412stk0001/'
-	args.dir_in = './register/20160412stk0001-0008/'
+	#args.dir_in = './register/20160412stk0001-0008/'
 	#args.dir_in = './register/test/'
 
 	#Get the set of reference frames...
-	#refframes = [int(i[-8:-4]) for i in glob(args.dir_in + 'refframes/*.png')]
+	refframes = [int(i[-8:-4]) for i in glob(args.dir_in + 'refframes/*.png')]
 
-	refframes = [1, 501, 1001, 1501]
+	#refframes = [1, 501, 1001, 1501]
 
 	nF = len(refframes)
 
