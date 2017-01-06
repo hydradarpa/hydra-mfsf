@@ -106,8 +106,12 @@ class Stitcher(app.Canvas):
 		#f.colorbar(ii)
 		#plt.show()
 
-		uf = np.squeeze(u1[:,:,-1])
-		vf = np.squeeze(v1[:,:,-1])
+		if len(u1.shape) == 3:
+			uf = np.squeeze(u1[:,:,-1])
+			vf = np.squeeze(v1[:,:,-1])
+		else:
+			uf = u1 
+			vf = v1
 
 		u = np.zeros(self.u2.shape)
 		v = np.zeros(self.v2.shape)
