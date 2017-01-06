@@ -285,6 +285,13 @@ def mumford_glasso(path_in, iframes, refframes, l = 1e-3, r = 1e-4, n_iter = 100
 	for k in range(nK):
 		cm[k,:] = cmaps(k)
 
+	if cpu:
+		dir_out = '%scpu_MS_lambda_%.02e_rho_%.02e_niter_%04d'%(dr,lmda,rho,args.n_iter)
+	else:
+		dir_out = '%sgpu_MS_lambda_%.02e_rho_%.02e_niter_%04d'%(dr,lmda,rho,args.n_iter)
+	if not os.path.exists(dir_out):
+	    os.makedirs(dir_out)
+
 	for l in range(nL):
 		#Load the image for each iframe
 		iframe_fn = path_in + 'refframes/frame_%04d.%s'%(iframes[l], ext)
@@ -301,10 +308,7 @@ def mumford_glasso(path_in, iframes, refframes, l = 1e-3, r = 1e-4, n_iter = 100
 		for k in range(nK):
 			ctr = (5, k*10+5)
 			cv2.circle(dst, ctr, 3, cm[k,:], -1)
-		if cpu:
-			cv2.imwrite('%scpu_iframe_%d_MS_lambda_%.02e_rho_%.02e_niter_%04d.png'%(dr,l,lmda,rho,args.n_iter), dst)
-		else:
-			cv2.imwrite('%sgpu_iframe_%d_MS_lambda_%.02e_rho_%.02e_niter_%04d.png'%(dr,l,lmda,rho,args.n_iter), dst)
+		cv2.imwrite('%s/iframe_%d.png'%(dir_out,iframes[l]), dst)
 
 	return u_s
 
@@ -316,7 +320,7 @@ if __name__ == '__main__':
 	parser.add_argument('-l', help='lambda: TV regularization weight (smaller = more regularization)', default=1e-4, type = float)
 	parser.add_argument('-r', help='rho: group LASSO regularization weight (larger = more regularization)', default = 1e-3, type = float)
 	parser.add_argument('-c', dest='cpu', help='cpu: if provided will use CPU instead of GPU', action = 'store_true')
-	parser.add_argument('-n', dest='n_iter', help='max iterations', default = 1000)
+	parser.add_argument('-n', dest='n_iter', help='max iterations', default = 1000, type = int)
 	parser.set_defaults(cpu = False)
 	args = parser.parse_args()
 
@@ -331,7 +335,7 @@ if __name__ == '__main__':
 	if not os.path.exists(dr):
 	    os.makedirs(dr)
 	if args.cpu:
-		fn_out = '%s/cpu_MS_lambda_%.02e_rho_%.02e_niter_%04d.npz'%(dr,args.l,args.r,args.n_iter)
+		fn_out = '%s/cpu_MS_lambda_%.02e_rho_%.02e_niter_%04d_%s.npz'%(dr,args.l,args.r,args.n_iter,args.iframes)
 	else:
-		fn_out = '%s/gpu_MS_lambda_%.02e_rho_%.02e_niter_%04d.npz'%(dr,args.l,args.r,args.n_iter)
+		fn_out = '%s/gpu_MS_lambda_%.02e_rho_%.02e_niter_%04d_%s.npz'%(dr,args.l,args.r,args.n_iter,args.iframes)
 	np.savez(fn_out, u_s = u_s)
