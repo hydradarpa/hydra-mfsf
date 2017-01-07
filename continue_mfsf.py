@@ -5,6 +5,8 @@ from lib.stitcher import Stitcher
 from scipy.io import loadmat, savemat 
 import numpy as np 
 import os
+import h5py 
+import gc 
 
 from matplotlib import pyplot as plt
 
@@ -12,10 +14,6 @@ from vispy import gloo
 from vispy import app
 
 from cvtools import readFlo
-
-import h5py 
-
-import gc 
 
 def continuation(path_in, mfsf_in, iframes, rframes):
 	usage = """Continue MFSF optic flow fields from separate videos into the one flow field 
@@ -66,32 +64,34 @@ Ben Lansdell
 			u1 = np.transpose(np.array(f.get('u')), (1,2,0))
 			v1 = np.transpose(np.array(f.get('v')), (1,2,0))
 
-		#Make a Stitcher. Takes the second set's flow data as input
-		thestitch = Stitcher(u1, v1)
-
 		#Continue paths for both reference frames 
 		#and save a mask of which paths should actually be continued based on 
 		#segmentation 
+		seg = np.argmax(cv2.resize(u_s[:,:,:,vidx], flow.shape[0:2]), axis = 2)
+
 		for k in range(nR):
 			fn1 = rframes[k]
 			#Load in flow results for each reference frame to the iframe 
 			if fn1 != fn2
+				#Make a Stitcher. Takes the second set's flow data as input
+				thestitch = Stitcher(u1, v1)
 				fn_in = name + '/corrmatrix/%04d_%04d.flo'%(fn1,fn2)
 				flow = readFlo(fn_in)
 				u0 = flow[:,:,0]
 				v0 = flow[:,:,1]
 				(u, v) = thestitch.run(u0, v0)	
-				#Resize u_s to be the same size...
+				del thestitch
+				unreachable = gc.collect()
 				#Threshold and label paths that are to be continued with this rframe
-				mask = cv2.resize(u_s[])
+				mask = (seg == k)
 			else:
+				u = u1 
+				v = v1 
+				mask = np.ones(u1.shape)
 
 			#Save output matrix
 			mdict = {'u':u, 'v':v, 'parmsOF':params, 'info':info, 'mask':mask}
-			savemat(args.fn_out + '/mfsf_%03d.mat'%vidx, mdict)
-
-		del thestitch
-		unreachable = gc.collect()
+			savemat(dr + '/mfsf_r_%04d_l_%04d.mat'%(fn1, fn2), mdict)
 		
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
