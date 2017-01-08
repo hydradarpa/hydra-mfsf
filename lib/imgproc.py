@@ -324,9 +324,17 @@ def drawGrid(img, pts, bars, L = None, F = None):
 	for (bar, color) in zip(bars, colors):
 		cv2.line(img, tuple(pts[bar[0]].astype(int)), tuple(pts[bar[1]].astype(int)), color)
 
+def drawFaces(img, pts, faces, col):
+	npts = len(faces)
+	colors = np.matlib.repmat(col, npts, 1)
+
+	for (f, color) in zip(faces, colors):
+		cv2.line(img, tuple(pts[f[0]].astype(int)), tuple(pts[f[1]].astype(int)), color)
+		cv2.line(img, tuple(pts[f[0]].astype(int)), tuple(pts[f[2]].astype(int)), color)
+		cv2.line(img, tuple(pts[f[1]].astype(int)), tuple(pts[f[2]].astype(int)), color)
+
 def interpolateSparseOpticFlow():
 	return 
-
 
 def load_ground_truth(csv_file_name):
 	# return a array of frame or a list of dict of tuples indexed by nueron id (x-int, y-int, rad-radius)

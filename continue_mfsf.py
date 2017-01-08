@@ -13,6 +13,8 @@ from matplotlib import pyplot as plt
 from vispy import gloo
 from vispy import app
 
+import cv2
+
 from cvtools import readFlo
 
 def continuation(path_in, mfsf_in, iframes, rframes):
@@ -31,13 +33,14 @@ Ben Lansdell
 
 	#Test code
 	path_in = './simmatrix/20160412/seg_admm/gpu_MS_lambda_1.00e-04_rho_1.00e-03_niter_3000.npy'
-	name = './simmatrix/20160412'
+	name = './simmatrix/20160412/'
 	mfsf_in = './mfsf_output/'
-	iframes = [1, 251, 501, 751]
+	iframes = [1, 251, 501, 751, 1001, 1251, 1501, 1751, 2001, 2251, 2501, 2751, 3001, 3251, 3501, 3751, 4001,\
+				4251, 4501, 4751]
 	rframes = [1, 501] 
 
 	#Prepare output directory 
-	dr = path_in + './continuation/'
+	dr = name + './continuation/'
 	if not os.path.exists(dr):
 	    os.makedirs(dr)
 
@@ -54,6 +57,8 @@ Ben Lansdell
 
 		fn2 = iframes[vidx]
 
+		print "Continuing video (frame %d)"%fn2
+
 		try:
 			a = loadmat(fn_in)	
 			params = a['parmsOF']
@@ -67,12 +72,12 @@ Ben Lansdell
 		#Continue paths for both reference frames 
 		#and save a mask of which paths should actually be continued based on 
 		#segmentation 
-		seg = np.argmax(cv2.resize(u_s[:,:,:,vidx], flow.shape[0:2]), axis = 2)
+		seg = np.argmax(cv2.resize(u_s[:,:,:,vidx], u1.shape[0:2]), axis = 2)
 
 		for k in range(nR):
 			fn1 = rframes[k]
 			#Load in flow results for each reference frame to the iframe 
-			if fn1 != fn2
+			if fn1 != fn2:
 				#Make a Stitcher. Takes the second set's flow data as input
 				thestitch = Stitcher(u1, v1)
 				fn_in = name + '/corrmatrix/%04d_%04d.flo'%(fn1,fn2)
@@ -87,10 +92,10 @@ Ben Lansdell
 			else:
 				u = u1 
 				v = v1 
-				mask = np.ones(u1.shape)
+				mask = np.ones(u1.shape[0:2])
 
 			#Save output matrix
-			mdict = {'u':u, 'v':v, 'parmsOF':params, 'info':info, 'mask':mask}
+			mdict = {'u':u, 'v':v, 'mask':mask}
 			savemat(dr + '/mfsf_r_%04d_l_%04d.mat'%(fn1, fn2), mdict)
 		
 if __name__ == '__main__':
