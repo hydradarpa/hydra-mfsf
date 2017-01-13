@@ -32,8 +32,8 @@ Ben Lansdell
 """
 
 	#Test code
-	path_in = './simmatrix/20160412/seg_admm/gpu_MS_lambda_1.00e-04_rho_1.00e-03_niter_3000.npy'
-	name = './simmatrix/20160412/'
+	path_in = './simmatrix/20160412_occ/seg_admm/gpu_MS_lambda_1.00e-04_rho_1.00e-03_niter_3000.npy'
+	name = './simmatrix/20160412_occ/'
 	mfsf_in = './mfsf_output/'
 	iframes = [1, 251, 501, 751, 1001, 1251, 1501, 1751, 2001, 2251, 2501, 2751, 3001, 3251, 3501, 3751, 4001,\
 				4251, 4501, 4751]

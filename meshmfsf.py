@@ -1,22 +1,23 @@
 #!/usr/bin/env python
 import sys, os
-from renderer import VideoStream, FlowStream
-from kalman import IteratedMSKalmanFilter
-from distmesh_dyn import DistMesh
+from lib.renderer import VideoStream, FlowStream
+from lib.kalman import IteratedMSKalmanFilter
+from lib.distmesh_dyn import DistMesh
 from scipy.io import loadmat 
 
 import cv2 
 import numpy as np 
 
-fn_in='../hydra/video/johntest_brightcontrast_short_jpg.avi'
-name='johntest_brightcontrast_short'
+fn_in='../hydra/video/20160412/stk_0001.avi'
+name='stk_0001_test'
 threshold = 15
 cuda = True
 gridsize = 25
 
+mfsf_in = './mfsf_output/stack0001_nref1_nframe250/'
 #mfsf_in = './mfsf_output/stk_0001_mfsf_nref100/'
 #mfsf_in = './mfsf_output/johntest_flag_STD_0_alpha_20_flag_grad_1_nref100/'
-mfsf_in = './mfsf_output/johntest_nref190/'
+#mfsf_in = './mfsf_output/johntest_nref190/'
 dm_out = 'init_mesh.pkl'
 
 imageoutput = mfsf_in + '/mesh/'
@@ -56,8 +57,8 @@ for idx in range(nF):
 #Save this distmesh and reload it for quicker testing
 #distmesh.save(mfsf_in + dm_out)
 
-distmesh = DistMesh(refframe, h0 = gridsize)
-distmesh.load(mfsf_in + dm_out)
+	distmesh = DistMesh(refframe, h0 = gridsize)
+	distmesh.load(mfsf_in + dm_out)
 
 refpositions = distmesh.p
 
@@ -102,7 +103,7 @@ if not os.path.exists(overlayoutput):
 for idx in range(nF):
 	os.system('cp ' + imageoutput + '_frame_%03d_overlay* '%idx + overlayoutput+'frame_%03d.png'%idx)
 
-avconv = 'avconv -framerate 5 -i ' + overlayoutput + 'frame_%03d.png -c:v huffyuv -y'
+avconv = 'avconv -framerate 5 -i ' + overlayoutput + 'frame_%03d.png -c:v mpeg4 -qscale 8 -y'
 os.system(avconv + ' ' + overlayoutput + 'output.avi')
 
-avconv -i frame_%03d.png -c:v huffyuv output.avi
+#avconv -i frame_%03d.png -c:v mpeg4 -qscale 8 output.avi

@@ -109,8 +109,8 @@ def continuation(path_in, mfsf_in, iframes, rframes):
 		active_pts = []
 		active_faces = []
 		for r,fn1 in enumerate(rframes):
-			dx = u[r][refpositions[r][:,0].astype(int), refpositions[r][:,1].astype(int), 0]
-			dy = v[r][refpositions[r][:,0].astype(int), refpositions[r][:,1].astype(int), 0]
+			dx = u[r][refpositions[r][:,1].astype(int), refpositions[r][:,0].astype(int), 0]
+			dy = v[r][refpositions[r][:,1].astype(int), refpositions[r][:,0].astype(int), 0]
 			X = refpositions[r].copy()
 			X[:,0] += dx
 			X[:,1] += dy
@@ -131,8 +131,8 @@ def continuation(path_in, mfsf_in, iframes, rframes):
 
 			for r,fn1 in enumerate(rframes):
 				#Perturb the vertices according to the flow
-				dx = u[r][refpositions[r][:,0].astype(int), refpositions[r][:,1].astype(int), idx]
-				dy = v[r][refpositions[r][:,0].astype(int), refpositions[r][:,1].astype(int), idx]
+				dx = u[r][refpositions[r][:,1].astype(int), refpositions[r][:,0].astype(int), idx]
+				dy = v[r][refpositions[r][:,1].astype(int), refpositions[r][:,0].astype(int), idx]
 				X = refpositions[r].copy()
 				X[:,0] += dx
 				X[:,1] += dy
