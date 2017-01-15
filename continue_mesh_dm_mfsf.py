@@ -35,8 +35,12 @@ def continuation(path_in, mfsf_in, iframes, rframes):
 	mfsf_in = name + '/continuation/'
 	#seg_in = name + '/seg_admm/gpu_MS_lambda_1.00e-04_rho_1.00e-03_niter_3000.npy'
 	rframes = [1, 501] 
-	iframes = [1,251,501,751,1001,1251,1501,1751,2001,2251,2501,2751,3001,3251,3501,3751,4001,4251,4501,4751]
+	iframes = [1,251,501,751,1001,1251,1501]
 	colors = np.array([[0, 255, 0], [255, 0, 0]])
+
+	dm_frames = [1, 501, 1251]
+	forward_mfsf = [[501, 751], [1251, 1501]]
+	reverse_mfsf = [[501, 251], [1251, 1001]]
 
 	threshold = 2
 	cuda = True

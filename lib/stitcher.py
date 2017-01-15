@@ -196,3 +196,75 @@ class Stitcher(app.Canvas):
 		indices_buffer = gloo.IndexBuffer(indices)
 	
 		return indices_buffer, vertex_data
+
+class StitcherReverse(Stitcher):
+
+	def run(self, u1, v1):
+		#Render this baby
+		(pi, pj) = self.render()
+
+		if len(u1.shape) == 3:
+			ui = np.squeeze(u1[:,:,0])
+			vi = np.squeeze(v1[:,:,0])
+		else:
+			ui = u1 
+			vi = v1
+
+		u = np.zeros(self.u2.shape)
+		v = np.zeros(self.v2.shape)
+
+		(nx, ny) = self.shape
+		for i in range(ny):
+			print("Shifting row %d"%i)
+			for j in range(nx):
+				#Get a path's first location in second video
+				ip = max(0, min(ny-1, int(i + vi[i,j])))
+				jp = max(0, min(nx-1, int(j + ui[i,j])))
+				#Find that location in the first video's reference frame
+				fix = int(pi[ip, jp])
+				fiy = int(pj[ip, jp])
+				#Use that reference pixel's optic flow data, with reference point adjusted
+				u[i,j,:] = fix - j + self.u2[fiy,fix,:]
+				v[i,j,:] = fiy - i + self.v2[fiy,fix,:]
+
+		return u, v
+
+	def loadMesh(self, vertices, triangles, u, v):
+		# Create vertices and texture coords, combined in one array for high performance
+		self.nP = vertices.shape[0]
+		self.nT = triangles.shape[0]
+
+		vertex_data = np.zeros(self.nP, dtype=[('a_position', np.float32, 3),
+			('a_texcoord', np.float32, 2)])
+
+		warped_vertices = np.zeros(vertices.shape)
+		for i,p in enumerate(vertices):
+			#wi = [p[0] + u[p[0], p[1], 0], p[1] + v[p[0], p[1], 0]]
+			wi = [p[0] + u[p[1], p[0], -1], p[1] + v[p[1], p[0], -1]]
+			warped_vertices[i,:] = wi
+
+		verdata = np.zeros((self.nP,3))
+		uvdata = np.zeros((self.nP,2))
+
+		#rescale
+		(nx,ny) = self.shape
+		verdata[:,0] = 2*warped_vertices[:,0]/nx-1
+		verdata[:,1] = 2*warped_vertices[:,1]/ny-1
+		#verdata[:,0] = warped_vertices[:,0]/nx
+		#verdata[:,1] = warped_vertices[:,1]/ny
+
+		#Does this need to be flipped?
+		verdata[:,1] = -verdata[:,1]
+		#verdata[:,0] = -verdata[:,0]
+
+		uvdata = vertices.astype(np.float32)
+		uvdata[:,0] = uvdata[:,0]/nx
+		uvdata[:,1] = uvdata[:,1]/ny
+
+		vertex_data['a_position'] = verdata
+		vertex_data['a_texcoord'] = uvdata 
+
+		indices = triangles.reshape((1,-1))
+		indices_buffer = gloo.IndexBuffer(indices)
+	
+		return indices_buffer, vertex_data

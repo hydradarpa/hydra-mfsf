@@ -2,7 +2,9 @@
 #Image segmentation on CUDA #
 #############################
 
-#Lansdell 2016
+#				  #
+## Lansdell 2016 ##
+#				  #
 
 import numpy as np
 from jinja2 import Template 
