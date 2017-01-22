@@ -107,8 +107,11 @@ class Stitcher(app.Canvas):
 		#plt.show()
 
 		if len(u1.shape) == 3:
-			uf = np.squeeze(u1[:,:,-1])
-			vf = np.squeeze(v1[:,:,-1])
+			#uf = np.squeeze(u1[:,:,-1])
+			#vf = np.squeeze(v1[:,:,-1])
+			#Strange bug with very last MFSF element... crappy workaround for now
+			uf = np.squeeze(u1[:,:,-2])
+			vf = np.squeeze(v1[:,:,-2])
 		else:
 			uf = u1 
 			vf = v1
@@ -240,7 +243,7 @@ class StitcherReverse(Stitcher):
 		warped_vertices = np.zeros(vertices.shape)
 		for i,p in enumerate(vertices):
 			#wi = [p[0] + u[p[0], p[1], 0], p[1] + v[p[0], p[1], 0]]
-			wi = [p[0] + u[p[1], p[0], -1], p[1] + v[p[1], p[0], -1]]
+			wi = [p[0] + u[p[1], p[0], -2], p[1] + v[p[1], p[0], -2]]
 			warped_vertices[i,:] = wi
 
 		verdata = np.zeros((self.nP,3))

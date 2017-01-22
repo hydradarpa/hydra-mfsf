@@ -130,6 +130,7 @@ Ben Lansdell
 			fn1 = rframes[k]
 
 			#Load MFSF data
+			#fn_in1 = mfsf_in + 'stack%04d_nref1_nframe250/result.mat'%(vidx1+1)
 			fn_in1 = dr + '/mfsf_r_%04d_l_%04d.mat'%(fn1, vn1)
 			#(u1, v1) = load_MFSF(fn_in1)
 			
@@ -171,6 +172,7 @@ Ben Lansdell
 
 			#Load MFSF data
 			fn_in1 = dr + '/mfsf_r_%04d_l_%04d.mat'%(fn1, vn1)			
+			#fn_in1 = mfsf_in + 'stack%04d_nref1_nframe250/result.mat'%(vidx1+1)
 			a = loadmat(fn_in1)	
 			u1 = a['u']
 			v1 = a['v']
