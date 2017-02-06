@@ -7,7 +7,7 @@ from os.path import basename
 import os.path 
 import os 
 
-from seg_cuda_admm import *
+from lib.seg_cuda_admm import *
 
 import matplotlib.pyplot as plt
 import matplotlib.cm as cmx
