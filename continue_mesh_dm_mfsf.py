@@ -89,73 +89,73 @@ def continuation(path_in, mfsf_in, iframes, rframes):
 	#For each MFSF file, we will make a video coloring the mesh by 		
 	for l,fn2 in enumerate(iframes):
 
-		#continued = []
-		#u = []
-		#v = []
-		##Flow data ./simmatrix/20160412/continuation/mfsf_r_0001_l_4251.mat
-		#for r,fn1 in enumerate(rframes):
-		#	#Load MFSF data for each ref frames 
-		#	if fn2 in dm_frames:
-		#		fn = mfsf_in + '/mfsf_r_%04d_l_%04d.mat'%(fn1,fn2)
-		#	elif fn2 in [f[1] for f in forward_mfsf]:
-		#		fn2_for = iframes[l-1]
-		#		fn = mfsf_in + '/mfsf_r_%04d_l_%04d_m_%04d.mat'%(fn1,fn2_for, fn2)
-		#	else:
-		#		fn2_rev = iframes[l+1]
-		#		fn = mfsf_in + '/mfsf_r_%04d_l_%04d_m_%04d.mat'%(fn1,fn2_rev, fn2)
-		#	a = loadmat(fn)
-		#	c = a['mask']
-		#	if len(c.shape) == 3:
-		#		continued.append(a['mask'][:,:,0])
-		#	else:
-		#		continued.append(a['mask'])
-		#	u.append(a['u'])
-		#	v.append(a['v'])
+		continued = []
+		u = []
+		v = []
+		#Flow data ./simmatrix/20160412/continuation/mfsf_r_0001_l_4251.mat
+		for r,fn1 in enumerate(rframes):
+			#Load MFSF data for each ref frames 
+			if fn2 in dm_frames:
+				fn = mfsf_in + '/mfsf_r_%04d_l_%04d.mat'%(fn1,fn2)
+			elif fn2 in [f[1] for f in forward_mfsf]:
+				fn2_for = iframes[l-1]
+				fn = mfsf_in + '/mfsf_r_%04d_l_%04d_m_%04d.mat'%(fn1,fn2_for, fn2)
+			else:
+				fn2_rev = iframes[l+1]
+				fn = mfsf_in + '/mfsf_r_%04d_l_%04d_m_%04d.mat'%(fn1,fn2_rev, fn2)
+			a = loadmat(fn)
+			c = a['mask']
+			if len(c.shape) == 3:
+				continued.append(a['mask'][:,:,0])
+			else:
+				continued.append(a['mask'])
+			u.append(a['u'])
+			v.append(a['v'])
 
-		##Load video stream
-		#capture = TIFFStream(vid_path_in + 'stk_%04d.tif'%(l+1), threshold)
-		#nx = capture.nx
-		#nF = capture.nframes
+		#Load video stream
+		capture = TIFFStream(vid_path_in + 'stk_%04d.tif'%(l+1), threshold)
+		nx = capture.nx
+		nF = capture.nframes
 	
-		##Perturb initial meshes by their flow fields
-		#positions = []
-		#active_pts = []
-		#active_faces = []
-		#for r,fn1 in enumerate(rframes):
-		#	dx = u[r][refpositions[r][:,1].astype(int), refpositions[r][:,0].astype(int), 0]
-		#	dy = v[r][refpositions[r][:,1].astype(int), refpositions[r][:,0].astype(int), 0]
-		#	X = refpositions[r].copy()
-		#	X[:,0] += dx
-		#	X[:,1] += dy
-		#	positions.append(X)
-		#	#Intersect perturbed points by labeled continuation data to get
-		#	#the faces that we're going to display in this video
-		#	act_pts = continued[r][X[:,1].astype(int), X[:,0].astype(int)]
-		#	act_fcs = np.array([act_pts[f].all() for f in faces[r]])
-		#	active_pts.append(act_pts)
-		#	active_faces.append(act_fcs)
+		#Perturb initial meshes by their flow fields
+		positions = []
+		active_pts = []
+		active_faces = []
+		for r,fn1 in enumerate(rframes):
+			dx = u[r][refpositions[r][:,1].astype(int), refpositions[r][:,0].astype(int), 0]
+			dy = v[r][refpositions[r][:,1].astype(int), refpositions[r][:,0].astype(int), 0]
+			X = refpositions[r].copy()
+			X[:,0] += dx
+			X[:,1] += dy
+			positions.append(X)
+			#Intersect perturbed points by labeled continuation data to get
+			#the faces that we're going to display in this video
+			act_pts = continued[r][X[:,1].astype(int), X[:,0].astype(int)]
+			act_fcs = np.array([act_pts[f].all() for f in faces[r]])
+			active_pts.append(act_pts)
+			active_faces.append(act_fcs)
 
-		##Then, for each frame, perturb the vertices by their respective flow fields
-		##and draw the active faces from each reference frame a different color
-		#for idx in range(nF):
-		#	print("Visualizing frame %d" % idx)
-		#	ret, frame, _ = capture.read(backsub = False)
-		#	frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+		#Then, for each frame, perturb the vertices by their respective flow fields
+		#and draw the active faces from each reference frame a different color
+		for idx in range(nF):
+			print("Visualizing frame %d" % idx)
+			ret, frame, _ = capture.read(backsub = False)
+			frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
 
-		#	for r,fn1 in enumerate(rframes):
-		#		#Perturb the vertices according to the flow
-		#		dx = u[r][refpositions[r][:,1].astype(int), refpositions[r][:,0].astype(int), idx]
-		#		dy = v[r][refpositions[r][:,1].astype(int), refpositions[r][:,0].astype(int), idx]
-		#		X = refpositions[r].copy()
-		#		X[:,0] += dx
-		#		X[:,1] += dy
+			for r,fn1 in enumerate(rframes):
+				#Perturb the vertices according to the flow
+				dx = u[r][refpositions[r][:,1].astype(int), refpositions[r][:,0].astype(int), idx]
+				dy = v[r][refpositions[r][:,1].astype(int), refpositions[r][:,0].astype(int), idx]
+				X = refpositions[r].copy()
+				X[:,0] += dx
+				X[:,1] += dy
 
-		#		#Draw the active faces
-		#		col = colors[r,:]
-		#		drawFaces(frame, X, faces[r][active_faces[r]], col)
-		#
-		#	#Save
-		#	cv2.imwrite(imageoutput + 'l_%04d_frame_%04d.png'%(fn2,idx), frame)
+				#Draw the active faces
+				col = colors[r,:]
+				drawFaces(frame, X, faces[r][active_faces[r]], col)
+		
+			#Save
+			cv2.imwrite(imageoutput + 'l_%04d_frame_%04d.png'%(fn2,idx), frame)
 	
 		#Make a video
 		print 'Making movie'

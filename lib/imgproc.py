@@ -324,14 +324,14 @@ def drawGrid(img, pts, bars, L = None, F = None):
 	for (bar, color) in zip(bars, colors):
 		cv2.line(img, tuple(pts[bar[0]].astype(int)), tuple(pts[bar[1]].astype(int)), color)
 
-def drawFaces(img, pts, faces, col):
+def drawFaces(img, pts, faces, col, thk = 2):
 	npts = len(faces)
 	colors = np.matlib.repmat(col, npts, 1)
 
 	for (f, color) in zip(faces, colors):
-		cv2.line(img, tuple(pts[f[0]].astype(int)), tuple(pts[f[1]].astype(int)), color)
-		cv2.line(img, tuple(pts[f[0]].astype(int)), tuple(pts[f[2]].astype(int)), color)
-		cv2.line(img, tuple(pts[f[1]].astype(int)), tuple(pts[f[2]].astype(int)), color)
+		cv2.line(img, tuple(pts[f[0]].astype(int)), tuple(pts[f[1]].astype(int)), color, thk)
+		cv2.line(img, tuple(pts[f[0]].astype(int)), tuple(pts[f[2]].astype(int)), color, thk)
+		cv2.line(img, tuple(pts[f[1]].astype(int)), tuple(pts[f[2]].astype(int)), color, thk)
 
 def interpolateSparseOpticFlow():
 	return 
