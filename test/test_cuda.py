@@ -2,7 +2,7 @@ import unittest
 import numpy.testing as npt 
 
 from seg import * 
-from seg_cuda import * 
+from lib.seg_cuda import * 
 
 import numpy as np
 from jinja2 import Template 
