@@ -1,7 +1,7 @@
-#!/usr/bin/env pythonx
+#!/usr/bin/env python
 import sys 
 import argparse 
-from stitcher import Stitcher
+from lib.stitcher import Stitcher
 from scipy.io import loadmat, savemat 
 import numpy as np 
 import os
@@ -13,44 +13,44 @@ from vispy import app
 
 import gc 
 
-#def main():
-#	usage = """stitch_mfsf.py [output_matfile] [input_matfile 1] [input_matfile 2] <input_matfile 3> ...
-#
-#Stitch together separate MFSF optic flow fields from separate videos into the one flow field 
-#whose coordinates are relative to the reference frame in the first video. This can be used for
-#tracking objects marked in the first video through later videos.
-#
-#Example: 
-#./stitch_mfsf.py [stk_1-2.mat] [results_stk_0001.mat] [results_stk_0002.mat]
-#
-#For help:
-#./stitch_mfsf.py -h 
-#
-#Ben Lansdell
-#10/12/2016
-#"""
-#
-#	parser = argparse.ArgumentParser()
-#	parser.add_argument('fn_out', help='output mat file')
-#	parser.add_argument('flow_in', help='input mat files from MFSF', nargs = '+')
-#	args = parser.parse_args()
+def main():
+	usage = """stitch_mfsf.py [output_matfile] [input_matfile 1] [input_matfile 2] <input_matfile 3> ...
+
+Stitch together separate MFSF optic flow fields from separate videos into the one flow field 
+whose coordinates are relative to the reference frame in the first video. This can be used for
+tracking objects marked in the first video through later videos.
+
+Example: 
+./stitch_mfsf.py [stk_1-2.mat] [results_stk_0001.mat] [results_stk_0002.mat]
+
+For help:
+./stitch_mfsf.py -h 
+
+Ben Lansdell
+10/12/2016
+"""
+
+	parser = argparse.ArgumentParser()
+	parser.add_argument('fn_out', help='output mat file')
+	parser.add_argument('flow_in', help='input mat files from MFSF', nargs = '+')
+	args = parser.parse_args()
 
 	#Test code
-	class Args:
-		pass 
-	args = Args()
-	args.fn_out = './stitched/stk_0001-0008/'
-	args.flow_in = ['./mfsf_output/stack0001_nref100_nframe250/result.mat',\
-					'./mfsf_output/stack0002_nref100_nframe250/result.mat',\
-					'./mfsf_output/stack0003_nref100_nframe250/result.mat',\
-					'./mfsf_output/stack0004_nref100_nframe250/result.mat',\
-					'./mfsf_output/stack0005_nref100_nframe250/result.mat',\
-					'./mfsf_output/stack0006_nref100_nframe250/result.mat',\
-					'./mfsf_output/stack0007_nref100_nframe250/result.mat',\
-					'./mfsf_output/stack0008_nref100_nframe250/result.mat']
+	#class Args:
+	#	pass 
+	#args = Args()
+	#args.fn_out = './stitched/stk_0001-0008/'
+	#args.flow_in = ['./mfsf_output/stack0001_nref100_nframe250/result.mat',\
+	#				'./mfsf_output/stack0002_nref100_nframe250/result.mat',\
+	#				'./mfsf_output/stack0003_nref100_nframe250/result.mat',\
+	#				'./mfsf_output/stack0004_nref100_nframe250/result.mat',\
+	#				'./mfsf_output/stack0005_nref100_nframe250/result.mat',\
+	#				'./mfsf_output/stack0006_nref100_nframe250/result.mat',\
+	#				'./mfsf_output/stack0007_nref100_nframe250/result.mat',\
+	#				'./mfsf_output/stack0008_nref100_nframe250/result.mat']
 
 	if not os.path.exists(args.fn_out):
-    	os.makedirs(args.fn_out)
+		os.makedirs(args.fn_out)
 
 	nV = len(args.flow_in)
 	if nV != 2:
