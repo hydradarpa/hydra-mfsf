@@ -16,7 +16,7 @@ function run_mfsf(path_in, name, nref, nframe, vis, pad)
 
 	% Save the result:
 	mkdir(path_res);
-	save(fullfile(path_res,'result.mat'), 'u', 'v', 'parmsOF','info');
+	save(fullfile(path_res,'result.mat'), 'u', 'v', 'parmsOF','info', '-v7.3');
 	
 	if vis > 0
 		path_figs = fullfile(path_res,'figures');

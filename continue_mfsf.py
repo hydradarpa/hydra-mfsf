@@ -64,7 +64,7 @@ Ben Lansdell
 			params = a['parmsOF']
 			u1 = a['u']
 			v1 = a['v']
-		except:
+		except NotImplementedError:
 			print "Failed to read using loadmat, using hdf5 library to read %s"%fn_in
 			f = h5py.File(fn_in,'r')
 			#Note the x and y axes may need to be switched here...

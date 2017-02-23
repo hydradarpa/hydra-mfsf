@@ -1,4 +1,4 @@
-#################################
+T#################################
 #gloo renderer for Kalman filter#
 #################################
 
@@ -955,11 +955,17 @@ class TIFFStream:
 
 		# to open a tiff file for reading:
 		self.tif = TIFF.open(fn, mode='r')
-		self.info = self.tif.info()
-		self.nframes = int(self.info.split('\n')[3].split('=')[1])
 		self.gen = self.tif.iter_images()
-		self.nx = int(self.info.split('\n')[10].split(':')[1])
-		self.ny = int(self.info.split('\n')[11].split(':')[1])
+		self.info = self.tif.info()
+		try:
+			self.nframes = int(self.info.split('\n')[3].split('=')[1])
+			self.nx = int(self.info.split('\n')[10].split(':')[1])
+			self.ny = int(self.info.split('\n')[11].split(':')[1])
+		except IndexError:
+			self.nframes = 200
+			self.nx = 1024
+			self.ny = 1024
+
 		self.frame = None
 		#self.frame_orig = frame.copy()
 		#self.grayframe = cv2.cvtColor(self.frame,cv2.COLOR_BGR2GRAY)
