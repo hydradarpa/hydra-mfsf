@@ -44,7 +44,3 @@ function burst_tiff(fn_in)
 	%Run avconv to make a video from the 8 bit frames
 	cmd = sprintf('avconv -i %s/frame_%%04d.tif -c:v libx264 -crf 20 -y %s/%s.mp4', path_res_u8, base, name);
 	system(cmd);
-
-
-
-	avconv -i ./frames8//frame_%04d.tif -c:v libx264 -crf 20 -y ./20170206.mp4
