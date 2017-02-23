@@ -33,7 +33,7 @@ def parseSheet(sheet):
 	return tracks 
 
 def main():
-	usage = """icy_particletracker.py [frames_in] [fn_out]
+	usage = """icy_particletracker.py [frames_in] [fn_out] -maxfiles MAXFILES
 
 	Run particle tracking method on series of tif files using bioimage analysis
 	program Icy. Calls program at the command line. 
@@ -48,10 +48,13 @@ def main():
 	parser = argparse.ArgumentParser()
 	parser.add_argument('frames_in', help='path to .tif files, will use all tif files in folder')
 	parser.add_argument('fn_out', help='output filename for python dictionary of tracks')
+	parser.add_argument('-maxfiles', help='maximum number of tif files to read', default=250)
 	args = parser.parse_args()
 	fn_out = args.fn_out
 	frames_in = args.frames_in
-	frames = ':'.join([abspath(p) for p in sorted(glob(frames_in + '*.tif'))])
+	fin = [abspath(p) for p in sorted(glob(frames_in + '*.tif'))]
+	fin = fin[0:mf]
+	frames = ':'.join(fin)
 
 	#Edit .xml protocol with input tif files
 	tree = ET.parse(icypath + protocol)
