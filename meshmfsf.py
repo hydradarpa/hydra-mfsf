@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import sys, os
-from lib.renderer import VideoStream, FlowStream, TIFFStream
-from lib.kalman import IteratedMSKalmanFilter
+from lib.renderer import VideoStream, TIFFStream
 from lib.distmesh_dyn import DistMesh
 from scipy.io import loadmat 
 
@@ -10,9 +9,11 @@ import cv2
 import numpy as np 
 import argparse
 import gc 
+import cv2
+from lib.imgproc import drawGrid, findObjectThreshold
 
 def main():
-	usage = """meshfmsf.py [vid_in] [flow_in] -threshold <> -gridsize <>
+	usage = """meshfmsf.py [vid_in] [flow_in] -threshold THRESH -gridsize GRIDSIZE
 
 	Visualize results of MFSF run by meshing an object and 'tracking' it
 		
@@ -27,8 +28,10 @@ def main():
 	parser.add_argument('-gridsize', help='approximate gridsize for mesh', default=25)
 	args = parser.parse_args()
 	
-	#fn_in='../hydra/video/20160412/stk_0001.avi'	
-	#mfsf_in = './mfsf_output/stack0001_nref1_nframe250/'
+	fn_in='../hydra/video/20170202/20170202_8bit.tif'	
+	mfsf_in = './mfsf_output/20170202_16bit/'
+	gridsize = 50
+	threshold = 15
 
 	mfsf_in = args.flow_in
 	fn_in = args.vid_in
@@ -38,11 +41,11 @@ def main():
 	dm_out = 'init_mesh.pkl'
 	cuda = False
 
-	imageoutput = mfsf_in + '/mesh/'
-	#Make directory if needed...
-	if not os.path.exists(imageoutput):
-	    os.makedirs(imageoutput)
-	
+	#Skip to this frame and create mesh 
+	capture = TIFFStream(fn_in, threshold)
+	nx = capture.nx
+	nF = capture.nframes
+
 	#Load MFSF data
 	try:
 		a = loadmat(mfsf_in + '/result.mat')
@@ -60,26 +63,21 @@ def main():
 		u = np.transpose(np.array(f.get('u')), (1,2,0))
 		v = np.transpose(np.array(f.get('v')), (1,2,0))
 		params = f.get('parmsOF')
-		#Figure out how to get the reference frame from the structure...
 		nref = int(params['nref'][0][0])
 	print "Loaded MFSF data"
 
-	#Skip to this frame and create mesh 
-	capture = TIFFStream(fn_in, threshold)
-	
-	nx = capture.nx
-	nF = capture.nframes
-	
 	for idx in range(nF):
 		print 'Loading frame', idx
 		ret, frame, mask = capture.read()
 		if idx == nref:
 			refframe = frame.copy()
-			masks = mask
+			tracking_mask = mask
+	
+	(mask, ctrs, fd) = findObjectThreshold(tracking_mask, threshold = .5)
 	
 	distmesh = DistMesh(refframe, h0 = gridsize)
 	if not os.path.exists(mfsf_in + dm_out):
-		distmesh.createMesh(ctrs, fd, refframe, plot = True)
+		distmesh.createMesh(ctrs, fd, refframe, plot = False)
 		#Save this distmesh and reload it for quicker testing
 		distmesh.save(mfsf_in + dm_out)
 	else:
@@ -87,49 +85,39 @@ def main():
 	
 	refpositions = distmesh.p
 	
-	#Create dummy input for flow frame
-	flowframe = np.zeros((nx, nx, 2))
-	
-	#Create Kalman Filter object to store mesh and make use of plotting functions
-	kf = IteratedMSKalmanFilter(distmesh, refframe, flowframe, cuda = cuda)
-	
 	#Perturb mesh points according to MFSF flow field and save screenshot output
 	nF = min(u.shape[2], nF)
-	N = kf.size()/4
 
 	del capture
 	gc.collect()
-	capture2 = TIFFStream(fn_in, threshold)
 
+	imageoutput = mfsf_in + 'mesh/'
+	#Make directory if needed...
+	if not os.path.exists(imageoutput):
+	    os.makedirs(imageoutput)
+	
+	capture2 = TIFFStream(fn_in, threshold)
 	
 	for idx in range(nF):
 		#Update positions based on reference positions and flow field
 		print("Visualizing frame %d" % idx)
 		ret, frame, mask = capture2.read() 
-		y_im = frame.astype(np.dtype('uint8'))
-		y_m = mask.astype(np.dtype('uint8'))
-		kf.state.renderer.update_frame(y_im, flowframe, y_m)
 		dx = u[refpositions[:,1].astype(int), refpositions[:,0].astype(int), idx]
 		dy = v[refpositions[:,1].astype(int), refpositions[:,0].astype(int), idx]
 		X = refpositions.copy()
 		X[:,0] += dx
 		X[:,1] += dy
-		kf.state.X[0:2*N] = np.reshape(X, (-1,1))
-		kf.state.refresh()
-		kf.state.render()
-		kf.state.renderer.screenshot(saveall=True, basename = imageoutput + '_frame_%03d' % idx)
+		drawGrid(frame, X, distmesh.bars, L = None, F = None)
+		cv2.imwrite(imageoutput + 'frame_%03d.png'%idx, frame)
 		
 	#Make a video
 	print 'Making movie'
-	overlayoutput = mfsf_in + '/mesh_overlay/'
+	overlayoutput = mfsf_in + 'mesh_overlay/'
 	if not os.path.exists(overlayoutput):
 	    os.makedirs(overlayoutput)
 	
-	for idx in range(nF):
-		os.system('cp ' + imageoutput + '_frame_%03d_overlay* '%idx + overlayoutput+'frame_%03d.png'%idx)
-	
-	avconv = 'avconv -framerate 5 -i ' + overlayoutput + 'frame_%03d.png -c:v mpeg4 -qscale 8 -y'
-	os.system(avconv + ' ' + overlayoutput + 'output.avi')
+	avconv = 'avconv -i ' + imageoutput + 'frame_%03d.png -c:v mpeg4 -qscale 8 -y'
+	os.system(avconv + ' ' + overlayoutput + 'output.mp4')
 
 if __name__ == "__main__":
 	sys.exit(main())
