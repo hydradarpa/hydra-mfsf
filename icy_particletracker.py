@@ -14,15 +14,17 @@ import numbers
 import timeit
 
 def parseSheet(sheet):
-	tracks = []
+	tracks = {}
 	currenttrack = []
+	ntracks = 0
 	nR = sheet.nrows
 	for r in range(nR):
 		row = sheet.row(r)
 		if len(row[0].value) > 0:		
 			#Start a new track
 			if len(currenttrack):
-				tracks.append(currenttrack)
+				tracks[ntracks] = currenttrack
+				ntracks += 1
 			currenttrack = []
 		elif isinstance(row[2].value, numbers.Number):
 			#Add to current track
@@ -88,6 +90,13 @@ def main():
 	sheet = wb.sheet_by_name('Tracks')
 	tracks = parseSheet(sheet)
 	pickle.dump(tracks, open(fn_out, 'wb'))
+
+	#Also save a csv file
+	fh = open(split(fn_out, '.')[0:-1]+'.csv', 'w')
+	for n_id in tracks:
+		for [x,y,frame] in tracks[n_id]:
+			fh.write("%d,%d,%d,%d\n"%(n_id, frame, x, y))
+	fh.close()
 
 	if runtime:
 		with open(runtime, 'a') as fh:
