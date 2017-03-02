@@ -24,15 +24,15 @@ def main():
 	parser = argparse.ArgumentParser()
 	parser.add_argument('vid_in', help='output mat file')
 	parser.add_argument('flow_in', help='input mat files from MFSF')
-	parser.add_argument('-threshold', help='intensities below this are not meshed', default=15)
+	parser.add_argument('-threshold', help='intensities below this are not meshed', default=25)
 	parser.add_argument('-gridsize', help='approximate gridsize for mesh', default=25)
 	args = parser.parse_args()
 	
 	#Test code
-	fn_in='../hydra/video/20170202/20170202_8bit.tif'	
-	mfsf_in = './mfsf_output/20170202_16bit/'
-	gridsize = 50
-	threshold = 15
+	#fn_in='../hydra/video/20170202/20170202_8bit.tif'	
+	#mfsf_in = './mfsf_output/20170202_16bit/'
+	#gridsize = 50
+	#threshold = 15
 
 	mfsf_in = args.flow_in
 	fn_in = args.vid_in
@@ -61,8 +61,10 @@ def main():
 		print "Failed to read using loadmat, using hdf5 library to read %s"%mfsf_in
 		f = h5py.File(mfsf_in + '/result.mat','r')
 		#Note the x and y axes may need to be switched here...
-		u = np.transpose(np.array(f.get('u')), (1,2,0))
-		v = np.transpose(np.array(f.get('v')), (1,2,0))
+		#u = np.transpose(np.array(f.get('u')), (1,2,0))
+		#v = np.transpose(np.array(f.get('v')), (1,2,0))
+		u = np.transpose(np.array(f.get('u')), (2,1,0))
+		v = np.transpose(np.array(f.get('v')), (2,1,0))
 		params = f.get('parmsOF')
 		nref = int(params['nref'][0][0])
 	print "Loaded MFSF data"
@@ -108,6 +110,7 @@ def main():
 		X = refpositions.copy()
 		X[:,0] += dx
 		X[:,1] += dy
+		frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
 		drawGrid(frame, X, distmesh.bars, L = None, F = None)
 		cv2.imwrite(imageoutput + 'frame_%03d.png'%idx, frame)
 		
@@ -117,7 +120,8 @@ def main():
 	if not os.path.exists(overlayoutput):
 	    os.makedirs(overlayoutput)
 	
-	avconv = 'avconv -i ' + imageoutput + 'frame_%03d.png -c:v mpeg4 -qscale 8 -y'
+	#avconv = 'avconv -i ' + imageoutput + 'frame_%03d.png -c:v mpeg4 -qscale 8 -y'
+	avconv = 'avconv -i ' + imageoutput + 'frame_%03d.png -c:v mpeg4 -qscale 29 -y'
 	os.system(avconv + ' ' + overlayoutput + 'output.mp4')
 
 if __name__ == "__main__":
