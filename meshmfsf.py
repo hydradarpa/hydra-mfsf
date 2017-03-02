@@ -28,6 +28,7 @@ def main():
 	parser.add_argument('-gridsize', help='approximate gridsize for mesh', default=25)
 	args = parser.parse_args()
 	
+	#Test code
 	fn_in='../hydra/video/20170202/20170202_8bit.tif'	
 	mfsf_in = './mfsf_output/20170202_16bit/'
 	gridsize = 50
