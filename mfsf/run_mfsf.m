@@ -1,8 +1,9 @@
-function run_mfsf(path_in, name, nref, nframe, vis, pad, maxpix)
+function run_mfsf(path_in, name, nref, nframe, vis, pad, maxpix, hd)
 
     if (nargin < 5) vis = 0; end
     if (nargin < 6) pad = 3; end
     if (nargin < 7) maxpix = 20000; end
+    if (nargin < 8) hd = 1; end
 
     fn = ['frame_%0' num2str(pad) 'd.tif'];
 
@@ -18,8 +19,11 @@ function run_mfsf(path_in, name, nref, nframe, vis, pad, maxpix)
 
 	% Save the result:
 	mkdir(path_res);
-	save(fullfile(path_res,'result.mat'), 'u', 'v', 'parmsOF','info', '-v7.3');
-	
+	if (hd == 1)
+		save(fullfile(path_res,'result.mat'), 'u', 'v', 'parmsOF','info', '-v7.3');
+	else 
+		save(fullfile(path_res,'result.mat'), 'u', 'v', 'parmsOF','info');	
+
 	if vis > 0
 		path_figs = fullfile(path_res,'figures');
 		tic; visualizeMFSF(path_in,u,v,parmsOF, 'path_figs',path_figs, 'Nrows_grid', 60,...
