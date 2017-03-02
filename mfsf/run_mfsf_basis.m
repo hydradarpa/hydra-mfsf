@@ -3,7 +3,7 @@ function run_mfsf_basis(path_in, name, nref, nframe, bas_file, vis, pad, maxpix)
     if (nargin < 5) bas_file = './analysis/20160412_dupreannotation_stk0001.csv'; end
     if (nargin < 6) vis = 0; end
     if (nargin < 7) pad = 3; end
-    if (nargin < 8) maxpix = 200000;
+    if (nargin < 8) maxpix = 200000; end
 
     fn = ['frame_%0' num2str(pad) 'd.tif'];
 
