@@ -65,8 +65,8 @@ def main():
 		print "Failed to read using loadmat, using hdf5 library to read %s"%mfsf_in
 		f = h5py.File(mfsf_in + '/result.mat','r')
 		#Note the x and y axes may need to be switched here...
-		u = np.transpose(np.array(f.get('u')), (1,2,0))
-		v = np.transpose(np.array(f.get('v')), (1,2,0))
+		u = np.transpose(np.array(f.get('u')), (2,1,0))
+		v = np.transpose(np.array(f.get('v')), (2,1,0))
 		params = f.get('parmsOF')
 		nref = int(params['nref'][0][0])
 	print "Loaded MFSF data"
@@ -186,10 +186,10 @@ def main():
 			)
 	
 		for c in range(nC):
-			print 'Frame: %d, Cell: %d'%(idx,c)
+			#print 'Frame: %d, Cell: %d'%(idx,c)
 			celloutput = imageoutput + '/celltrack_maxerror_%03d_cell_%03d/'%(int(max_error[c]), c)
 			fn_out = celloutput + '/frame_%03d.png'%idx
-			#plt.clf()
+			plt.clf()
 			#Get tracked and true neuron locations
 			true_pos = np.squeeze(truepositions[idx,c,:])
 			pred_pos = np.squeeze(estpositions[idx,c,:])
@@ -256,7 +256,7 @@ def main():
 	
 	
 	sample = np.random.choice(range(nC), 50)
-	#plt.clf()
+	plt.clf()
 	f, (ax1, ax2, ax3) = plt.subplots(3, sharex = True)
 	ax1.set_title('distance error')
 	ax2.set_title('correlation bw true and tracked')
@@ -288,7 +288,7 @@ def main():
 	
 	#Make plot of distances over time
 	fn_out = imageoutput + "errors.eps"
-	#plt.clf()
+	plt.clf()
 	plt.plot(distance_error[:,sample], linewidth = 0.5)
 	axes = plt.gca()
 	axes.plot(tracked_thresh*np.ones(nF), linewidth = 3, color = (0, 0, 0), linestyle = 'dashed')

@@ -8,6 +8,26 @@ import distmesh.utils as dmutils
 
 from imgproc import drawGrid
 
+def orientation(p, tri):
+	a = p[tri[:,1],:] - p[tri[:,0],:]
+	b = p[tri[:,2],:] - p[tri[:,0],:]
+	ori = np.sign(np.cross(a,b))
+	return ori
+
+def Delaunay(p, fd = None):
+	delaunay = spspatial.Delaunay(p)
+	t = delaunay.vertices       # List of triangles
+	pmid = p[t].sum(1)/3                     # Compute centroids
+	if fd is not None:
+		t = t[fd(pmid) < 0]                  # Keep interior triangles
+	# 4. Describe each bar by a unique pair of nodes
+	bars = np.vstack((t[:, [0,1]],
+						t[:, [1,2]],
+						t[:, [2,0]]))          # Interior bars duplicated
+	bars.sort(axis=1)
+	bars = ml.unique_rows(bars)              # Bars as node pairs
+	return bars, t
+
 class DistMesh:
 	def __init__(self, frame, h0 = 35, dptol = 0.01):
 		self.bars = None 
