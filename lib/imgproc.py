@@ -311,9 +311,11 @@ def drawPoints(img, pts, types = None):
 	for (i,pt) in enumerate(pts):
 		cv2.circle(img,tuple(pt.astype(int)),3,colors[types[i]],-1)
 
-def drawGrid(img, pts, bars, L = None, F = None):
+def drawGrid(img, pts, bars, L = None, F = None, cols = None):
 	npts = len(bars)
-	if L is not None:
+	if cols is not None:
+		colors = cols
+	elif L is not None:
 		colors = np.zeros((npts, 3))
 		forces = F(L)
 		maxF = np.max(forces)
@@ -322,6 +324,7 @@ def drawGrid(img, pts, bars, L = None, F = None):
 		colors = npml.repmat([0, 255, 0], npts, 1)
 
 	for (bar, color) in zip(bars, colors):
+		#print bar
 		cv2.line(img, tuple(pts[bar[0]].astype(int)), tuple(pts[bar[1]].astype(int)), color)
 
 def drawFaces(img, pts, faces, col, thk = 2):

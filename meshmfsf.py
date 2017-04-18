@@ -111,7 +111,7 @@ def main():
 		X[:,0] += dx
 		X[:,1] += dy
 		frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
-		drawGrid(frame, X, distmesh.bars, L = None, F = None)
+		drawGrid(frame, X/4, distmesh.bars, L = None, F = None)
 		cv2.imwrite(imageoutput + 'frame_%03d.png'%idx, frame)
 		
 	#Make a video
