@@ -1,8 +1,8 @@
 function run_mfsf(path_in, name, nref, nframe, vis, pad, maxpix, hd)
 
     if (nargin < 5) vis = 0; end
-    if (nargin < 6) pad = 3; end
-    if (nargin < 7) maxpix = 20000; end
+    if (nargin < 6) pad = 4; end
+    if (nargin < 7) maxpix = 200000; end
     if (nargin < 8) hd = 1; end
 
     fn = ['frame_%0' num2str(pad) 'd.tif'];

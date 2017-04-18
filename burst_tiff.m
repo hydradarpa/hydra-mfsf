@@ -1,7 +1,18 @@
-function burst_tiff(fn_in)
+function burst_tiff(fn_in, mini, maxi)
 	%Test case:
 	%fn_in = './video/20170202/20170202-gcamp-ecto-10hz-1bin4-1000fr.tif';
 	%fn_in = './20170202-gcamp-ecto-10hz-1bin4-1000fr.tif';
+
+	u8 = 2^8-1;
+	u16 = 2^16-1;
+	nrm = true;
+
+	if (nargin < 2) mini = u16;	end
+	if (nargin < 3)
+		maxi = 0;
+	else
+		nrm = false;
+	end
 
 	[base, name, ext] = fileparts(fn_in);
 	path_res = [base '/frames/']; 
@@ -14,18 +25,14 @@ function burst_tiff(fn_in)
 	ts = TIFFStack(fn_in);
 	nF = size(ts, 3);
 
-	u8 = 2^8-1;
-	u16 = 2^16-1;
-
-	mini = u16;
-	maxi = 0;
-
 	for idx = 1:nF
 		display(['Writing frame ' num2str(idx)]);
 		%Read frame
 		fr = ts(:,:,idx);
-		mini = min(min(min(fr)), mini);
-		maxi = max(max(max(fr)), maxi);
+		if nrm == true
+			mini = min(min(min(fr)), mini);
+			maxi = max(max(max(fr)), maxi);
+		end
 		fn_out = sprintf('%s/frame_%04d.tif', path_res, idx);
 		%Write frame 
 		imwrite(fr, fn_out);
@@ -35,6 +42,9 @@ function burst_tiff(fn_in)
 		display(['Writing normalized 8 bit frame ' num2str(idx)]);
 		%Read frame
 		fr = ts(:,:,idx);
+		if nrm == false
+			fr = min(maxi, fr);
+		end
 		f8 = uint8(u8*double((fr-mini))/double(maxi-mini));
 		fn_out = sprintf('%s/frame_%04d.tif', path_res_u8, idx);
 		%Write frame 

@@ -3,5 +3,5 @@ name = '20170202_16bit';
 nref = 100; 
 nframe = 500;
 pad = 4;
-run_mfsf(path_in, name, nref, nframe, 0, pad)
-	
+maxpix = 400000;
+run_mfsf(path_in, name, nref, nframe, 0, pad, maxpix)
