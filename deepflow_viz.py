@@ -33,11 +33,11 @@ Ben Lansdell
 	args = parser.parse_args()
 
 	#Test code
-	class Args:
-		pass 
-	args = Args()
-	args.path_in = './register/20160412stk0001-0008/'
-	args.rframes = ['frame_0001.tif', 'frame_0501.tif', 'frame_1001.tif', 'frame_1501.tif']
+	#class Args:
+	#	pass 
+	#args = Args()
+	#args.path_in = './register/20160412stk0001-0008/'
+	#args.rframes = ['frame_0001.tif', 'frame_0501.tif', 'frame_1001.tif', 'frame_1501.tif']
 
 	#Get all files in 
 	iframes = sorted(glob(args.path_in + 'refframes/*'))

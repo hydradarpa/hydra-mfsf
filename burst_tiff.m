@@ -56,3 +56,4 @@ function burst_tiff(fn_in, mini, maxi)
 	system(cmd);
 	
 	%avconv -i ./frames8//frame_%04d.tif -c:v libx264 -crf 20 -y ./stk_0001.mp4
+end

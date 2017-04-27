@@ -10,6 +10,7 @@ from libtiff import TIFF
 
 from glob import glob 
 
+LD_LIB = 'LD_LIBRARY_PATH=/home/lansdell/python/gpudm/caffe/build/lib:/usr/local/cuda/lib64:/home/clear/lear/intel/mkl/lib/intel64:/usr/lib64/openmpi/lib/:google_tools/lib::/usr/local/cuda/lib64:/usr/local/lib/:/home/lansdell/local/caffe/build/lib/'
 DM = '~/deepmatching/deep_matching_gpu.py'
 DF = '~/deepflow/deepflow2-static'
 
@@ -87,7 +88,8 @@ Ben Lansdell
 				fn2 = int(os.path.splitext(os.path.basename(im2))[0].split('_')[1])
 				print("DeepMatching between frame %d and %d" %(fn1, fn2))
 				fn_out = args.path_in + 'corrmatrix/%04d_%04d.txt'%(fn1,fn2)
-				os.system('python %s %s %s -ds %d -out %s' %(DM, im1, im2, downscale, fn_out)) 
+				os.system('%s python %s %s %s -ds %d -out %s' %(LD_LIB, DM, im1, im2, downscale, fn_out)) 
+				os.system('%s python %s %s %s -ds %d -out %s' %(LD_LIB, DM, im2, im1, downscale, fn_out)) 
 
 	#Run DeepFlow
 	for r in range(nR):
@@ -105,6 +107,7 @@ Ben Lansdell
 				fn_out = args.path_in + 'corrmatrix/%04d_%04d.flo'%(fn1,fn2)
 				matches = args.path_in + 'corrmatrix/%04d_%04d.txt'%(fn1,fn2)
 				os.system(DF + ' %s %s %s -match %s' %(im1, im2, fn_out, matches)) 
+				os.system(DF + ' %s %s %s -match %s' %(im2, im1, fn_out, matches)) 
 
 if __name__ == "__main__":
 	sys.exit(main())
