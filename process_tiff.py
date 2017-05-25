@@ -30,11 +30,11 @@ Ben Lansdell
 	#Test code
 	class args:
 		pass
-	args.name = '20170219'
+	args.name = '20140829'
 	args.vid_dir = '../hydra/video/'
 	args.mfsf_dir = './mfsf_output'
 	args.res_dir = './simmatrix'
-	args.nframes = 250
+	args.nframes = 50
 	args.refframes = '-1'
 	args.refframes = [int(a) for a in args.refframes.split(',')]
 
