@@ -63,6 +63,9 @@ class Stitcher(app.Canvas):
 		self.I = gloo.Texture2D(xv.astype(np.float32), format="luminance", internalformat="r32f")
 		self.J = gloo.Texture2D(yv.astype(np.float32), format="luminance", internalformat="r32f")
 
+		self.positions = positions
+		self.triangles = triangles 
+
 		self.indices_buffer, self.vertex_data = self.loadMesh(positions, triangles, u2, v2)
 		self._vbo = gloo.VertexBuffer(self.vertex_data)
 
@@ -151,10 +154,12 @@ class Stitcher(app.Canvas):
 	def render(self):
 		with self._fboi:
 			gloo.clear()
+			self._programi.bind(self._vbo)
 			self._programi.draw('triangles', self.indices_buffer)
 			pixelsi = gloo.read_pixels(out_type = np.float32)[:,:,0]
 		with self._fboj:
 			gloo.clear()
+			self._programj.bind(self._vbo)
 			self._programj.draw('triangles', self.indices_buffer)
 			pixelsj = gloo.read_pixels(out_type = np.float32)[:,:,0]
 		return (pixelsi, pixelsj)
