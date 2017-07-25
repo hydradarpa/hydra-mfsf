@@ -1,7 +1,7 @@
 function stats = tracking_performance(real_tracks_in, est_tracks_in, stats_out)
 
 	CPDPATH = '~/matlab/CPD2';
-	test = true;
+	test = false;
 
 	if nargin < 3
 		stats_out = '';
@@ -33,21 +33,25 @@ function stats = tracking_performance(real_tracks_in, est_tracks_in, stats_out)
 	%fn_in1 = real_tracks_in;
 	%fn_in2 = est_tracks_in;
 
+	nF = 99;
+
 	%Test code defaults
 	if test
 		write_stats = false;
-		fn_in1 = './tracks/20160412/20160412_dupreannotation_stk0001.csv';
-		fn_in2 = './tracks/20160412/20160412_dupreannotation_stk0001.csv';
+		real_tracks_in = './tracks/20160412/20160412_dupreannotation_stk0001.csv';
+		est_tracks_in = './tracks/20160412/20160412_dupreannotation_stk0001.csv';
 	end
 	
-	real_tracks = loadtracks(fn_in1);
+	real_tracks = loadtracks(real_tracks_in);
 	nRT = real_tracks.Count;
-	est_tracks = loadtracks(fn_in2);
-	nET = est_tracks.Count;
+	est_tracks = loadtracks(est_tracks_in);
+	nET = est_tracks.Count
+	est_tracks.keys
 
 	%Determine number of frames...
-	parpool(8);
-	parfor refframe = 1:nF
+	%parpool(8);
+	%parfor refframe = 1:nF
+	for refframe = 1:nF
 		display(['Computing stats using ' num2str(refframe) ' as a reference'])
 	
 		%Make list of real_tracks that are in refframe
@@ -61,7 +65,7 @@ function stats = tracking_performance(real_tracks_in, est_tracks_in, stats_out)
 	
 		%Make list of est_tracks that are in refframe
 		est_track_refframe = [];
-		for idx = 0:(nRT-1)
+		for idx = 0:(nET-1)
 			t = est_tracks(idx);
 			if any(t(:,1) == refframe)
 				est_track_refframe(end+1) = idx;
@@ -104,7 +108,7 @@ function stats = tracking_performance(real_tracks_in, est_tracks_in, stats_out)
 		nreal = size(Gr_ref,1);
 		nest = size(D_ref,1);
 		stats_ref = stattracks(real_tracks, est_tracks, matched_tracknos, nreal, nest);
-		append_stats(stats_ref, stats);
+		stats = append_stats(stats_ref, stats);
 	end
 		
 	%Save this data for plotting
@@ -113,12 +117,12 @@ function stats = tracking_performance(real_tracks_in, est_tracks_in, stats_out)
 	end
 end
 
-function append_stats(stats_in, stats)
+function s = append_stats(stats_in, stats)
 	
-	stats.lifetimes = [stats.lifetimes; stats_in.lifetimes];
-	stats.rms = [stats.rms stats_in.rms];
-	stats.prop_gt = [stats.prop_gt stats_in.prop_gt];
-	stats.prop_est = [stats.prop_est stats_in.prop_est];
-	stats.minlens = [stats.minlens stats_in.minlens];
+	s.lifetimes = [stats.lifetimes; stats_in.lifetimes];
+	s.rms = [stats.rms stats_in.rms];
+	s.prop_gt = [stats.prop_gt stats_in.prop_gt];
+	s.prop_est = [stats.prop_est stats_in.prop_est];
+	s.minlens = [stats.minlens stats_in.minlens];
 
 end
