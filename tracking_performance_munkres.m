@@ -2,7 +2,7 @@ function stats = tracking_performance_munkres(real_tracks_in, est_tracks_in, sta
 
 	%Use the Munkres algorithm to associate set of tracks based on cost function between tracks
 
-	test = true;
+	test = false;
 
 	if nargin < 3
 		stats_out = '';
@@ -10,12 +10,6 @@ function stats = tracking_performance_munkres(real_tracks_in, est_tracks_in, sta
 	else
 		write_stats = true;
 	end
-
-	stats.lifetimes = [];
-	stats.rms = [];
-	stats.prop_gt = [];
-	stats.prop_est = [];
-	stats.minlens = [];
 
 	%Load detection data from csv file
 	%fn_in1 = real_tracks_in;
@@ -51,7 +45,7 @@ function stats = tracking_performance_munkres(real_tracks_in, est_tracks_in, sta
 	%For these tracks compute the cost matrix
 	cost = zeros(nET, nRT);
 	for i = 0:(nET-1)
-		i
+		i;
 		t1 = est_tracks(i);
 		for j = 0:(nRT-1)
 			t2 = real_tracks(j);
@@ -62,24 +56,12 @@ function stats = tracking_performance_munkres(real_tracks_in, est_tracks_in, sta
 	%Run Munkres to assign tracks with one another
 	%Takes around 10-15 minutes to run
 	[assign, cost_min] = munkres(cost);
+	stats = computestats(est_tracks, real_tracks, assign);
 
-	%Once have assignments compute stats between tracks
-
-		
 	%Save this data for plotting
 	if write_stats
 		save(stats_out, stats);
 	end
-end
-
-function s = append_stats(stats_in, stats)
-	
-	s.lifetimes = [stats.lifetimes; stats_in.lifetimes];
-	s.rms = [stats.rms stats_in.rms];
-	s.prop_gt = [stats.prop_gt stats_in.prop_gt];
-	s.prop_est = [stats.prop_est stats_in.prop_est];
-	s.minlens = [stats.minlens stats_in.minlens];
-
 end
 
 function c = trackdistance(t1, t2, ep)
