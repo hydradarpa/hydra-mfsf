@@ -5,5 +5,63 @@ stats_error_motion = tracking_performance_munkres('./tracks/20160412/20160412_du
 
 %Save stats
 save('./scripts/20160412_jerry_tracking.mat', 'stats_baseline', 'stats_error', 'stats_motion', 'stats_error_motion');
-
 load('./scripts/20160412_jerry_tracking.mat');
+
+%Make some plots and stuff
+figure 
+subplot(2,2,1)
+histogram(stats_baseline.prop_lessthanthr(stats_baseline.matched==1), 'Binwidth', .1)
+title('Baseline')
+subplot(2,2,2)
+histogram(stats_error.prop_lessthanthr(stats_error.matched==1), 'Binwidth', .1)
+title('Error corrected')
+subplot(2,2,3)
+histogram(stats_motion.prop_lessthanthr(stats_motion.matched==1), 'Binwidth', .1)
+title('Motion corrected')
+subplot(2,2,4)
+histogram(stats_error_motion.prop_lessthanthr(stats_error_motion.matched==1), 'Binwidth', .1)
+title('Error + motion corrected')
+saveplot(gcf, './scripts/20160412_jerry_tracking_perf_proplessthanthr.eps')
+
+figure 
+subplot(2,2,1)
+histogram(stats_baseline.rms(stats_baseline.matched==1), 'Binwidth', 3, 'Binlimits', [0 60])
+xlabel('pixels')
+title('Baseline')
+subplot(2,2,2)
+histogram(stats_error.rms(stats_error.matched==1), 'Binwidth', 3, 'Binlimits', [0 60])
+xlabel('pixels')
+title('Error corrected')
+subplot(2,2,3)
+histogram(stats_motion.rms(stats_motion.matched==1), 'Binwidth', 3, 'Binlimits', [0 60])
+xlabel('pixels')
+title('Motion corrected')
+subplot(2,2,4)
+histogram(stats_error_motion.rms(stats_error_motion.matched==1), 'Binwidth', 3, 'Binlimits', [0 60])
+xlabel('pixels')
+title('Error + motion corrected')
+saveplot(gcf, './scripts/20160412_jerry_tracking_perf_rms.eps')
+
+figure 
+subplot(2,2,1)
+histogram(stats_baseline.lifetimes(stats_baseline.matched==1,2), 'Binwidth', 3, 'Binlimits', [0 102])
+xlim([0 102])
+xlabel('frames')
+title('Baseline')
+subplot(2,2,2)
+histogram(stats_error.lifetimes(stats_error.matched==1,2), 'Binwidth', 3, 'Binlimits', [0 102])
+xlim([0 102])
+xlabel('frames')
+title('Error corrected')
+subplot(2,2,3)
+histogram(stats_motion.lifetimes(stats_motion.matched==1,2), 'Binwidth', 3, 'Binlimits', [0 102])
+xlim([0 102])
+xlabel('frames')
+title('Motion corrected')
+subplot(2,2,4)
+histogram(stats_error_motion.lifetimes(stats_error_motion.matched==1,2), 'Binwidth', 3, 'Binlimits', [0 102])
+xlim([0 102])
+xlabel('frames')
+title('Error + motion corrected')
+saveplot(gcf, './scripts/20160412_jerry_tracking_perf_lifetimes.eps')
+

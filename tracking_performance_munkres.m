@@ -15,8 +15,6 @@ function stats = tracking_performance_munkres(real_tracks_in, est_tracks_in, sta
 	%fn_in1 = real_tracks_in;
 	%fn_in2 = est_tracks_in;
 
-	nF = 99;
-
 	%Test code defaults
 	if test
 		write_stats = false;

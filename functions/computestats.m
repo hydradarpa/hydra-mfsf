@@ -5,7 +5,9 @@ function stats = computestats(est_tracks, real_tracks, assign)
 	stats.prop_gt = 0;
 	stats.prop_est = 0;
 	stats.minlens = [];
+	stats.prop_lessthanthr = [];
 	stats.matched = [];
+	stats.thr = 6;
 
 	%Extract the matching tracks
 	[true_in_est,c] = find(assign);
@@ -28,16 +30,20 @@ function stats = computestats(est_tracks, real_tracks, assign)
 				p2 = tr_est(i2,2:3);
 				n = size(p1,1);
 				rmse = sqrt(sum(sum((p1-p2).^2/n)));
+				ds = sqrt(sum((p1-p2).^2,2));
+				stats.prop_lessthanthr(end+1) = sum(ds < stats.thr)/length(ds);
 				stats.rms(end+1) = rmse;
 				stats.matched(end+1) = 1;
 			else
 				stats.rms(end+1) = 0;
+				stats.prop_lessthanthr(end+1) = 0;
 				stats.matched(end+1) = 0;
 				stats.lifetimes(end+1,:) = 0;
 				stats.minlens(end+1) = 0;
 			end
 		else 
 			stats.rms(end+1) = 0;
+			stats.prop_lessthanthr(end+1) = 0;
 			stats.matched(end+1) = 0;
 			stats.lifetimes(end+1,:) = 0;
 			stats.minlens(end+1) = 0;
