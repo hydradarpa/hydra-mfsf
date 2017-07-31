@@ -40,8 +40,8 @@ Ben Lansdell
 	#class Args:
 	#	pass 
 	#args = Args()
-	#args.path_in = './simmatrix/20160412/'
-	#args.rframes = ['frame_0001.tif', 'frame_0251.tif']
+	#args.path_in = './simmatrix/20170219/'
+	#args.rframes = ['frame_00001.tif', 'frame_00751.tif']
 	#args.ext = 'png'
 	#args.downscale = 2 
 
@@ -89,6 +89,7 @@ Ben Lansdell
 				print("DeepMatching between frame %d and %d" %(fn1, fn2))
 				fn_out = args.path_in + 'corrmatrix/%04d_%04d.txt'%(fn1,fn2)
 				os.system('%s python %s %s %s -ds %d -out %s' %(LD_LIB, DM, im1, im2, downscale, fn_out)) 
+				fn_out = args.path_in + 'corrmatrix/%04d_%04d.txt'%(fn2,fn1)
 				os.system('%s python %s %s %s -ds %d -out %s' %(LD_LIB, DM, im2, im1, downscale, fn_out)) 
 
 	#Run DeepFlow
@@ -107,6 +108,7 @@ Ben Lansdell
 				fn_out = args.path_in + 'corrmatrix/%04d_%04d.flo'%(fn1,fn2)
 				matches = args.path_in + 'corrmatrix/%04d_%04d.txt'%(fn1,fn2)
 				os.system(DF + ' %s %s %s -match %s' %(im1, im2, fn_out, matches)) 
+				fn_out = args.path_in + 'corrmatrix/%04d_%04d.flo'%(fn2,fn1)
 				os.system(DF + ' %s %s %s -match %s' %(im2, im1, fn_out, matches)) 
 
 if __name__ == "__main__":

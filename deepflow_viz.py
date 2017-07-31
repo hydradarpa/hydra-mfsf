@@ -40,7 +40,7 @@ Ben Lansdell
 	#args.rframes = ['frame_0001.tif', 'frame_0501.tif', 'frame_1001.tif', 'frame_1501.tif']
 
 	#Get all files in 
-	iframes = sorted(glob(args.path_in + 'refframes/*'))
+	iframes = sorted(glob(args.path_in + 'refframes/*.tif'))
 	nF = len(iframes)
 	nR = len(args.rframes)
 
@@ -65,8 +65,8 @@ Ben Lansdell
 		im1 = iframes[i]
 		#Get frame number 
 		fn1 = int(os.path.splitext(os.path.basename(im1))[0].split('_')[1])
-		for s in range(nR):
-			j = rframeidx[s]
+		for j in range(nF):
+			#j = rframeidx[s]
 			im2 = iframes[j]
 			if i != j:
 				fn2 = int(os.path.splitext(os.path.basename(im2))[0].split('_')[1])

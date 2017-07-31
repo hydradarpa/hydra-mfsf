@@ -94,7 +94,9 @@ Ben Lansdell
 	# Step 6
 	print("** Computer MFSF forward and backward error terms, all possible paths, and then segment")
 
-	#seg_admm_mfsf_dm
+	#Probably needs some modifying from previous version...
+	cmd = './mfsf_corrmatrix.py '
+	os.system(cmd)
 
 	# Step 7
 	print("** Continue paths and visualize")
