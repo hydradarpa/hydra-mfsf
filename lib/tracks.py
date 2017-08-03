@@ -60,7 +60,7 @@ def load_tracks_csv(fn_in):
 	#Also save a csv file
 	fh = open(fn_in, 'r')
 	for line in fh:
-		[n_id, frame, x, y] = [int(d) for d in line.split(',')]
+		[n_id, frame, x, y] = [int(float(d)) for d in line.split(',')]
 		if n_id in cells:
 			cells[n_id].append([x,y,frame])
 		else:

@@ -20,6 +20,7 @@ function stats = tracking_performance_munkres(real_tracks_in, est_tracks_in, sta
 		write_stats = false;
 		real_tracks_in = './tracks/20160412/20160412_dupreannotation_stk0001.csv';
 		est_tracks_in = './tracks/20160412/jerry_motion_corrected.csv';
+		stats_out = './scripts/20160412_jerry_tracklength_10_50.mat';
 	end
 	
 	real_tracks = loadtracks(real_tracks_in);
@@ -55,10 +56,17 @@ function stats = tracking_performance_munkres(real_tracks_in, est_tracks_in, sta
 	%Takes around 10-15 minutes to run
 	[assign, cost_min] = munkres(cost);
 	stats = computestats(est_tracks, real_tracks, assign);
+	[true_in_est,c] = find(assign);
+	%the track labels used zero based indexing
+	stats.true_in_est = true_in_est-1;
+
+	corresp = stats.true_in_est;
+	corresp(corresp >= (nET-nRT)) = -1;
 
 	%Save this data for plotting
 	if write_stats
-		save(stats_out, stats);
+		save(stats_out, 'stats', 'real_tracks', 'est_tracks');
+		csvwrite([stats_out(1:end-4) '_corresp.csv'],corresp);
 	end
 end
 
