@@ -41,14 +41,17 @@ Ben Lansdell
 	#args.dir_in = './register/test/'
 
 	#Get the set of reference frames...
-	refframes = [int(i[-8:-4]) for i in glob(args.dir_in + 'refframes/*.png')]
+	#refframes = [int(i[-8:-4]) for i in glob(args.dir_in + 'refframes/*.png')]
+
+	refframes = [int(i.split('_')[1].split('.')[0]) for i in glob(args.dir_in + 'refframes/*.png')]
+	refframes.sort()
+	print refframes
 
 	#refframes = [1, 501, 1001, 1501]
 
 	nF = len(refframes)
 
 	threshold = 4
-	radius = 6
 
 	#Load DeepFlow results
 	for r1 in refframes:

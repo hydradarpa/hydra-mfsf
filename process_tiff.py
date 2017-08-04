@@ -30,12 +30,12 @@ Ben Lansdell
 	#Test code
 	class args:
 		pass
-	args.name = '20140829'
+	args.name = '20170219'
 	args.vid_dir = '../hydra/video/'
 	args.mfsf_dir = './mfsf_output'
 	args.res_dir = './simmatrix'
-	args.nframes = 50
-	args.refframes = '-1'
+	args.nframes = 250
+	args.refframes = '1,751'
 	args.refframes = [int(a) for a in args.refframes.split(',')]
 
 	#Steps 1 and 2.
@@ -92,13 +92,18 @@ Ben Lansdell
 	os.system(cmd)
 
 	# Step 6
-	print("** Computer MFSF forward and backward error terms, all possible paths, and then segment")
-
-	#Probably needs some modifying from previous version...
-	cmd = './mfsf_corrmatrix.py '
+	print("** Compute MFSF forward and backward error terms")
+	cmd = './mfsf_corrmatrix.py %s %s %s %d'%(args.mfsf_dir, args.res_dir, args.name, args.nframes)
 	os.system(cmd)
+	#Visualize the MFSF continuations
 
-	# Step 7
+	#Step 7
+	print("** Compute error terms for possible continuation paths and segment")
+
+	#Run the segmentation on both DM and MFSF errors
+	#This version must have support for continuing paths based on MFSF or DeepMatching.
+
+	# Step 8
 	print("** Continue paths and visualize")
 
 	#Load MS segmenting results for each reference frame
