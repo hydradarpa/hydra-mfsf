@@ -41,6 +41,13 @@ sum(stats_10_70.prop_lessthanthr(stats_10_70.matched == 1)==1)/620
 sum(stats_15_70.prop_lessthanthr(stats_15_70.matched == 1)==1)/620
 sum(stats_20_70.prop_lessthanthr(stats_20_70.matched == 1)==1)/620
 
+sum(stats_10_50.prop_lessthanthr(stats_10_50.matched == 1)==1)/287
+sum(stats_15_50.prop_lessthanthr(stats_15_50.matched == 1)==1)/287
+sum(stats_20_50.prop_lessthanthr(stats_20_50.matched == 1)==1)/287
+sum(stats_10_70.prop_lessthanthr(stats_10_70.matched == 1)==1)/287
+sum(stats_15_70.prop_lessthanthr(stats_15_70.matched == 1)==1)/287
+sum(stats_20_70.prop_lessthanthr(stats_20_70.matched == 1)==1)/287
+
 %Make some plots and stuff
 figure 
 subplot(2,3,1)

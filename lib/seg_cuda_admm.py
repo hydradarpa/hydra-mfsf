@@ -16,9 +16,9 @@ try:
 	import pycuda.driver as cuda_driver
 	import pycuda
 	import pycuda.autoinit
+	BLOCK_SIZE = 256
 	from pycuda.compiler import SourceModule
 	import pycuda.gpuarray as gpuarray
-	BLOCK_SIZE = 256
 	print '...success'
 except:
 	print "...pycuda not installed"

@@ -38,6 +38,26 @@ Ben Lansdell
 	args.refframes = '1,751'
 	args.refframes = [int(a) for a in args.refframes.split(',')]
 
+	class args:
+		pass
+	args.name = 'moon'
+	args.vid_dir = '../hydra/video/'
+	args.mfsf_dir = './mfsf_output'
+	args.res_dir = './simmatrix'
+	args.nframes = 100
+	args.refframes = '1,201,401,601'
+	args.refframes = [int(a) for a in args.refframes.split(',')]
+
+	class args:
+		pass
+	args.name = 'earth'
+	args.vid_dir = '../hydra/video/'
+	args.mfsf_dir = './mfsf_output'
+	args.res_dir = './simmatrix'
+	args.nframes = 50
+	args.refframes = '1,101,201,301,401'
+	args.refframes = [int(a) for a in args.refframes.split(',')]
+
 	#Steps 1 and 2.
 	print '** Split large tiff into %d frame stacks. Convert to 8 bit. Run MFSF forward and backward'%args.nframes
 	cmd = "matlab -r \"try splitlargetiff('%s', '%s', %d); catch; display('Failed'); end; quit;\""%(args.name,args.vid_dir, args.nframes)
@@ -103,8 +123,23 @@ Ben Lansdell
 	#Run the segmentation on both DM and MFSF errors
 	#This version must have support for continuing paths based on MFSF or DeepMatching.
 
+	refframes = ','.join([str(i) for i in args.refframes])
+	iframes = sorted(glob.glob(args.res_dir + '/' + args.name + '/' + 'refframes/*.tif'))
+	if l == 4:
+		iframes = [int(a[-8:-4]) for a in iframes]
+	if l == 5:
+		iframes = [int(a[-9:-4]) for a in iframes]
+	iframes = ','.join([str(a) for a in iframes])
+
+	#cmd = './seg_admm_dmmfsf.py %s/%s/ --rframes %s --iframes %s'%(args.res_dir, args.name, refframes, iframes)
+	cmd = './seg_admm.py %s/%s/ --rframes %s --iframes %s'%(args.res_dir, args.name, refframes, iframes)
+	os.system(cmd)
+
 	# Step 8
 	print("** Continue paths and visualize")
+
+	#Need to modify, but will base on
+	'./continue_dm_mfsf.py'
 
 	#Load MS segmenting results for each reference frame
 	#u_s = np.load(path_in)

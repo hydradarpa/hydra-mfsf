@@ -17,7 +17,7 @@ import cv2
 
 from cvtools import readFlo
 
-def continuation(path_in, mfsf_in, iframes, rframes):
+def continuation(path_in, name, mfsf_in, iframes, rframes):
 	usage = """Continue MFSF optic flow fields from separate videos into the one flow field 
 whose coordinates are relative to a set of reference frames specified.
 
@@ -32,14 +32,15 @@ Ben Lansdell
 """
 
 	#Test code
-	path_in = './simmatrix/20160412/seg_admm/gpu_MS_lambda_1.00e-04_rho_1.00e-03_niter_3000.npy'
-	name = './simmatrix/20160412/'
-	mfsf_in = './mfsf_output/'
-	iframes = [1, 251, 501, 751, 1001, 1251, 1501, 1751, 2001, 2251, 2501, 2751, 3001, 3251, 3501, 3751, 4001,\
-				4251, 4501, 4751]
-	rframes = [1, 501] 
+	#path_in = './simmatrix/20160412/seg_admm/gpu_MS_lambda_1.00e-04_rho_1.00e-03_niter_3000.npy'
+	#name = './simmatrix/20160412/'
+	#mfsf_in = './mfsf_output/'
+	#iframes = [1, 251, 501, 751, 1001, 1251, 1501, 1751, 2001, 2251, 2501, 2751, 3001, 3251, 3501, 3751, 4001,\
+	#			4251, 4501, 4751]
+	#rframes = [1, 501] 
 
 	#Prepare output directory 
+	
 	dr = name + './continuation/'
 	if not os.path.exists(dr):
 	    os.makedirs(dr)
@@ -103,6 +104,7 @@ Ben Lansdell
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('path_in', help='input directory with frames already placed in it')
+	parser.add_argument('name', help='name of video project')
 	parser.add_argument('mfsf_in', help='input directory with mfsf output data already placed in it')
 	parser.add_argument('--rframes', help='list of global reference frames. Provide as list of integers without space (e.g. 1,2,3,4)', type = str)
 	parser.add_argument('--iframes', help='list of intermediate iframes. Provide as list of integers without space (e.g. 1,2,3,4)', type = str)
@@ -111,4 +113,4 @@ if __name__ == '__main__':
 	iframes = [int(i) for i in args.iframes.split(',')]
 	refframes = [int(i) for i in args.rframes.split(',')]
 
-	continuation(args.path_in, args.mfsf_in, iframes, refframes)
+	continuation(args.path_in, args.name, args.mfsf_in, iframes, refframes)
