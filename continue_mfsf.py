@@ -89,7 +89,7 @@ Ben Lansdell
 			if fn1 != fn2:
 				#Make a Stitcher. Takes the second set's flow data as input
 				thestitch = Stitcher(u1, v1)
-				fn_in = name + '/corrmatrix/%04d_%04d.flo'%(fn1,fn2)
+				fn_in = res_dir + '/' + name + '/corrmatrix/%04d_%04d.flo'%(fn1,fn2)
 				flow = readFlo(fn_in)
 				u0 = flow[:,:,0]
 				v0 = flow[:,:,1]

@@ -151,7 +151,7 @@ Ben Lansdell
 			#return 
 
 	#Need to modify, but will base on
-	cmd = './continue_mfsf.py %s %s %s --res_dir %s --rframes %s --iframes %s'%\
+ 	cmd = './continue_mfsf.py %s %s %s --res_dir %s --rframes %s --iframes %s'%\
 	(args.name, segmentation, args.mfsf_dir, args.res_dir, refframes, iframes)
 	os.system(cmd)
 
