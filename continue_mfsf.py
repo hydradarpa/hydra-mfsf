@@ -1,4 +1,4 @@
-#!/usr/bin/env pythonx
+#!/usr/bin/env python
 import sys 
 import argparse 
 from lib.stitcher import Stitcher
@@ -17,7 +17,7 @@ import cv2
 
 from cvtools import readFlo
 
-def continuation(path_in, name, mfsf_in, iframes, rframes):
+def continuation(name, segmentation, res_dir, mfsf_in, iframes, rframes):
 	usage = """Continue MFSF optic flow fields from separate videos into the one flow field 
 whose coordinates are relative to a set of reference frames specified.
 
@@ -32,8 +32,9 @@ Ben Lansdell
 """
 
 	#Test code
-	#path_in = './simmatrix/20160412/seg_admm/gpu_MS_lambda_1.00e-04_rho_1.00e-03_niter_3000.npy'
-	#name = './simmatrix/20160412/'
+	#name = '20160412'
+	#segmentation = './simmatrix/20160412/seg_admm/gpu_MS_lambda_1.00e-04_rho_1.00e-03_niter_3000.npy'
+	#res_dir = './simmatrix/'
 	#mfsf_in = './mfsf_output/'
 	#iframes = [1, 251, 501, 751, 1001, 1251, 1501, 1751, 2001, 2251, 2501, 2751, 3001, 3251, 3501, 3751, 4001,\
 	#			4251, 4501, 4751]
@@ -41,20 +42,25 @@ Ben Lansdell
 
 	#Prepare output directory 
 	
-	dr = name + './continuation/'
+	dr = res_dir + '/' + name + '/continuation/'
 	if not os.path.exists(dr):
 	    os.makedirs(dr)
 
 	#Load MS segmenting results for each reference frame
-	u_s = np.load(path_in)
+	u_s = np.load(segmentation)
+	u_s = u_s['u_s']
+
+	print u_s.shape
 
 	nR = len(rframes)
 	nF = len(iframes)
 
+	nframes = iframes[1] - iframes[0]
+
 	#For each MFSF file
 	for vidx in range(nF):
 		#Load MFSF data
-		fn_in = mfsf_in + 'stack%04d_nref1_nframe250/result.mat'%(vidx+1)
+		fn_in = mfsf_in + '/' + name + '/stack%04d_nref1_nframe%d/result.mat'%(vidx+1, nframes)
 
 		fn2 = iframes[vidx]
 
@@ -103,9 +109,10 @@ Ben Lansdell
 		
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
-	parser.add_argument('path_in', help='input directory with frames already placed in it')
 	parser.add_argument('name', help='name of video project')
+	parser.add_argument('segmentation', help='npy file with segmentation results')
 	parser.add_argument('mfsf_in', help='input directory with mfsf output data already placed in it')
+	parser.add_argument('--res_dir', help='', type = str, default='./simmatrix/')
 	parser.add_argument('--rframes', help='list of global reference frames. Provide as list of integers without space (e.g. 1,2,3,4)', type = str)
 	parser.add_argument('--iframes', help='list of intermediate iframes. Provide as list of integers without space (e.g. 1,2,3,4)', type = str)
 	args = parser.parse_args()
@@ -113,4 +120,4 @@ if __name__ == '__main__':
 	iframes = [int(i) for i in args.iframes.split(',')]
 	refframes = [int(i) for i in args.rframes.split(',')]
 
-	continuation(args.path_in, args.name, args.mfsf_in, iframes, refframes)
+	continuation(args.name, args.segmentation, args.res_dir, args.mfsf_in, iframes, refframes)

@@ -138,8 +138,22 @@ Ben Lansdell
 	# Step 8
 	print("** Continue paths and visualize")
 
+	dr = args.res_dir + '/' + args.name + '/seg_admm/'
+	segmentation = glob.glob('%s/gpu_*.npz'%dr)
+	if len(segmentation) > 0:
+		segmentation = segmentation[0]
+	else:
+		segmentation = glob.glob('%s/cpu_*.npz'%dr)
+		try:
+			segmentation = segmentation[0]
+		except IndexError:
+			raise IOError, 'Cannot find segmentation file, check seg_admm.py completed'
+			#return 
+
 	#Need to modify, but will base on
-	'./continue_dm_mfsf.py'
+	cmd = './continue_mfsf.py %s %s %s --res_dir %s --rframes %s --iframes %s'%\
+	(args.name, segmentation, args.mfsf_dir, args.res_dir, refframes, iframes)
+	os.system(cmd)
 
 	#Load MS segmenting results for each reference frame
 	#u_s = np.load(path_in)
