@@ -136,7 +136,7 @@ Ben Lansdell
 	os.system(cmd)
 
 	# Step 8
-	print("** Continue paths and visualize")
+	print("** Continue paths and visualize results with mesh")
 
 	dr = args.res_dir + '/' + args.name + '/seg_admm/'
 	segmentation = glob.glob('%s/gpu_*.npz'%dr)
@@ -154,6 +154,15 @@ Ben Lansdell
  	cmd = './continue_mfsf.py %s %s %s --res_dir %s --rframes %s --iframes %s'%\
 	(args.name, segmentation, args.mfsf_dir, args.res_dir, refframes, iframes)
 	os.system(cmd)
+
+	#Finally we visualize this thing...
+	parser.add_argument('path_in', help='input directory with frames already placed in it')
+	parser.add_argument('mfsf_in', help='input directory with mfsf output data already placed in it')
+	parser.add_argument('--rframes', help='list of global reference frames. Provide as list of integers without space (e.g. 1,2,3,4)', type = str)
+	parser.add_argument('--iframes', help='list of intermediate iframes. Provide as list of integers without space (e.g. 1,2,3,4)', type = str)
+
+ 	cmd = './continue_mesh.py %s %s %s --res_dir %s --rframes %s --iframes %s'
+ 	os.system(cmd)
 
 	#Load MS segmenting results for each reference frame
 	#u_s = np.load(path_in)

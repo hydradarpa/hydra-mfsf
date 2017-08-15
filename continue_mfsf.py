@@ -40,6 +40,13 @@ Ben Lansdell
 	#			4251, 4501, 4751]
 	#rframes = [1, 501] 
 
+	name = 'moon'
+	segmentation = './simmatrix/moon/seg_admm/gpu_MS_lambda_1.00e-04_rho_1.00e-03_niter_1000_1,101,201,301,401,501,601,701,801,901,1001,1101,1201,1301,1401.npz'
+	res_dir = './simmatrix/'
+	mfsf_in = './mfsf_output/'
+	iframes = [1,101,201,301,401,501,601,701,801,901,1001,1101,1201,1301,1401]
+	rframes = [1,201,401,601] 
+
 	#Prepare output directory 
 	
 	dr = res_dir + '/' + name + '/continuation/'

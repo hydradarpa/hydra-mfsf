@@ -8,6 +8,8 @@ stats_20_70 = tracking_performance_munkres('./tracks/20160412/20160412_dupreanno
 save('./scripts/20160412_jerry_tracklength.mat', 'stats_10_50','stats_15_50','stats_20_50','stats_10_70','stats_15_70','stats_20_70');
 load('./scripts/20160412_jerry_tracklength.mat');
 
+nRT = 620;
+
 %Some stats:
 %RMSE
 median(stats_10_50.rms(stats_10_50.matched == 1))
@@ -48,7 +50,72 @@ sum(stats_10_70.prop_lessthanthr(stats_10_70.matched == 1)==1)/287
 sum(stats_15_70.prop_lessthanthr(stats_15_70.matched == 1)==1)/287
 sum(stats_20_70.prop_lessthanthr(stats_20_70.matched == 1)==1)/287
 
-%Make some plots and stuff
+%Make plots with distance per track
+
+stats = {stats_10_50, stats_15_50, stats_20_50, stats_10_70, stats_15_70, stats_20_70};
+names = {'gap_10_minlen_50', 'gap_15_minlen_50', 'gap_20_minlen_50', 'gap_10_minlen_70', 'gap_15_minlen_70', 'gap_20_minlen_70'};
+nS = length(stats);
+
+fc = figure
+hold on 
+
+fd = figure 
+hold on
+
+hot(64);
+cmap = colormap();
+nC = size(cmap,1);
+
+for j = 1:nS
+	s = stats{j};
+	thr = s.thr;
+	figure
+	hold on 
+	for idx = 1:nRT
+		if s.matched(idx) == 1
+			cc = ceil(max(s.residual{idx}/40*nC));
+			c = cmap(mod(cc,nC)+1,:);
+			plot(s.residual{idx}, 'Color', c);
+		end
+	end
+	saveplot(gcf, ['./scripts/20160412_jerry_tracklength_length_' names{j} '.eps'])
+
+	figure
+	hold on 
+	for idx = 1:nRT
+		if s.matched(idx) == 1
+			cc = ceil(max(s.residual{idx}/40*nC));
+			c = cmap(mod(cc,nC)+1,:);
+			plot(s.times{idx}, s.residual{idx}, 'Color', c);
+		end
+	end
+	saveplot(gcf, ['./scripts/20160412_jerry_tracklength_length_' names{j} '.eps'])
+	
+	distances_count = zeros(1,200);
+	distances_ave = zeros(1,200);
+	proplessthanthr = zeros(1,200);
+	
+	%Compute average distances at each time point, compute proportions less than 6 at each time point
+	for idx = 1:nRT
+		if s.matched(idx) == 1
+			t = s.times{idx};
+			lessthanthr = s.residual{idx}'<thr;
+			distances_ave(1,t) = (distances_ave(1,t).*distances_count(1,t) + s.residual{idx}')./(distances_count(1,t) + 1);
+			distances_count(1,t) = distances_count(t) + 1;
+			proplessthanthr(1,t) = (proplessthanthr(1,t).*distances_count(1,t) + lessthanthr)./(distances_count(1,t) + 1);
+		end
+	end
+	figure(fc)
+	plot(distances_ave)
+
+	figure(fd)
+	plot(proplessthanthr)
+end
+saveplot(gcf, './scripts/20160412_jerry_tracklength_length_distances_ave_time.eps')
+saveplot(gcf, './scripts/20160412_jerry_tracklength_length_proplessthr_time.eps')
+
+
+%Make some histogram plots for statistcs of each track
 figure 
 subplot(2,3,1)
 plot(stats_10_50.prop_lessthanthr(stats_10_50.matched==1), stats_10_50.lifetimes(stats_10_50.matched==1,2), '.')

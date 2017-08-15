@@ -15,6 +15,9 @@ function stats = computestats(est_tracks, real_tracks, assign)
 	nRT = length(true_in_est);
 	nET = size(assign,1)-nRT;
 
+	stats.residual = cell(nRT,1);
+	stats.times = cell(nRT,1);
+
 	%Compare each matched track
 	for idx = 1:nRT
 		tr_gr = real_tracks(idx-1);
@@ -31,10 +34,15 @@ function stats = computestats(est_tracks, real_tracks, assign)
 				n = size(p1,1);
 				rmse = sqrt(sum(sum((p1-p2).^2/n)));
 				ds = sqrt(sum((p1-p2).^2,2));
+				ts = i1;
+				stats.times{idx} = ts;
+				stats.residual{idx} = ds;
 				stats.prop_lessthanthr(end+1) = sum(ds < stats.thr)/length(ds);
 				stats.rms(end+1) = rmse;
 				stats.matched(end+1) = 1;
 			else
+				stats.times{idx} = [];
+				stats.residual{idx} = [];
 				stats.rms(end+1) = 0;
 				stats.prop_lessthanthr(end+1) = 0;
 				stats.matched(end+1) = 0;
@@ -42,6 +50,8 @@ function stats = computestats(est_tracks, real_tracks, assign)
 				stats.minlens(end+1) = 0;
 			end
 		else 
+			stats.times{idx} = [];
+			stats.residual{idx} = [];
 			stats.rms(end+1) = 0;
 			stats.prop_lessthanthr(end+1) = 0;
 			stats.matched(end+1) = 0;
