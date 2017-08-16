@@ -40,12 +40,19 @@ Ben Lansdell
 	#			4251, 4501, 4751]
 	#rframes = [1, 501] 
 
-	name = 'moon'
-	segmentation = './simmatrix/moon/seg_admm/gpu_MS_lambda_1.00e-04_rho_1.00e-03_niter_1000_1,101,201,301,401,501,601,701,801,901,1001,1101,1201,1301,1401.npz'
+	#name = 'moon'
+	#segmentation = './simmatrix/moon/seg_admm/gpu_MS_lambda_1.00e-04_rho_1.00e-03_niter_1000_1,101,201,301,401,501,601,701,801,901,1001,1101,1201,1301,1401.npz'
+	#res_dir = './simmatrix/'
+	#mfsf_in = './mfsf_output/'
+	#iframes = [1,101,201,301,401,501,601,701,801,901,1001,1101,1201,1301,1401]
+	#rframes = [1,201,401,601] 
+
+	name = 'earth'
+	segmentation = './simmatrix/earth/seg_admm/gpu_MS_lambda_1.00e-04_rho_1.00e-03_niter_3000_1,51,101,151,201,251,301,351,401,451,501,551,601,651,701,751,801.npz'
 	res_dir = './simmatrix/'
 	mfsf_in = './mfsf_output/'
-	iframes = [1,101,201,301,401,501,601,701,801,901,1001,1101,1201,1301,1401]
-	rframes = [1,201,401,601] 
+	iframes = [1,51,101,151,201,251,301,351,401,451,501,551,601,651,701,751,801]
+	rframes = [1,101,201,301,401] 
 
 	#Prepare output directory 
 	

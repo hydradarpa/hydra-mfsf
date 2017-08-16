@@ -14,13 +14,13 @@ from glob import glob
 
 from lib.imgproc import drawFaces
 
-def continuation(path_in, mfsf_in, iframes, rframes):
+def continuation(path_in, iframes, rframes):
 	usage = """Continue MFSF optic flow fields from separate videos into the one flow field 
 	whose coordinates are relative to a set of reference frames specified. Visualize results 
 	by generating meshes of different colors -- to correspond to different reference frames.
 	
 	Example: 
-	./continue_mesh.py --rframes 1,501 --iframes 1,251,501,751 ./simmatrix/20160412/ ./mfsf_output/ 
+	./continue_mesh.py --rframes 1,501 --iframes 1,251,501,751 ./simmatrix/20160412/
 	
 	For help:
 	./continue_mesh.py -h 
@@ -30,13 +30,21 @@ def continuation(path_in, mfsf_in, iframes, rframes):
 	"""
 
 	#Test code 
+	#vid_path_in = '../hydra/video/20160412/combined/'
+	#name = './simmatrix/20160412/'
+	#mfsf_in = name + '/continuation/'
+	#rframes = [1, 501] 
+	#iframes = [1,251,501,751,1001,1251,1501,1751,2001,2251,2501,2751,3001,3251,3501,3751,4001,4251,4501,4751]
+	#colors = np.array([[0, 255, 0], [255, 0, 0]])
+
+	name = './simmatrix/earth/'
 	vid_path_in = '../hydra/video/20160412/combined/'
-	name = './simmatrix/20160412/'
-	mfsf_in = name + '/continuation/'
-	#seg_in = name + '/seg_admm/gpu_MS_lambda_1.00e-04_rho_1.00e-03_niter_3000.npy'
-	rframes = [1, 501] 
-	iframes = [1,251,501,751,1001,1251,1501,1751,2001,2251,2501,2751,3001,3251,3501,3751,4001,4251,4501,4751]
+	rframes = [1,101,201,301,401] 
+	iframes = [1,51,101,151,201,251,301,351,401,451,501,551,601,651,701,751,801]
+
 	colors = np.array([[0, 255, 0], [255, 0, 0]])
+
+	mfsf_in = name + '/continuation/'
 
 	threshold = 2
 	cuda = True
@@ -156,7 +164,6 @@ def continuation(path_in, mfsf_in, iframes, rframes):
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('path_in', help='input directory with frames already placed in it')
-	parser.add_argument('mfsf_in', help='input directory with mfsf output data already placed in it')
 	parser.add_argument('--rframes', help='list of global reference frames. Provide as list of integers without space (e.g. 1,2,3,4)', type = str)
 	parser.add_argument('--iframes', help='list of intermediate iframes. Provide as list of integers without space (e.g. 1,2,3,4)', type = str)
 	args = parser.parse_args()
@@ -164,4 +171,4 @@ if __name__ == '__main__':
 	iframes = [int(i) for i in args.iframes.split(',')]
 	refframes = [int(i) for i in args.rframes.split(',')]
 
-	continuation(args.path_in, args.mfsf_in, iframes, refframes)
+	continuation(args.path_in, iframes, refframes)

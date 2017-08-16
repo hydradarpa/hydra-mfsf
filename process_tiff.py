@@ -131,8 +131,11 @@ Ben Lansdell
 		iframes = [int(a[-9:-4]) for a in iframes]
 	iframes = ','.join([str(a) for a in iframes])
 
+	##MFSF + DM
 	#cmd = './seg_admm_dmmfsf.py %s/%s/ --rframes %s --iframes %s'%(args.res_dir, args.name, refframes, iframes)
-	cmd = './seg_admm.py %s/%s/ --rframes %s --iframes %s'%(args.res_dir, args.name, refframes, iframes)
+
+	##Old
+	cmd = './seg_admm.py %s/%s/ --rframes %s --iframes %s -n 3000'%(args.res_dir, args.name, refframes, iframes)
 	os.system(cmd)
 
 	# Step 8
@@ -155,18 +158,12 @@ Ben Lansdell
 	(args.name, segmentation, args.mfsf_dir, args.res_dir, refframes, iframes)
 	os.system(cmd)
 
-	#Finally we visualize this thing...
-	parser.add_argument('path_in', help='input directory with frames already placed in it')
-	parser.add_argument('mfsf_in', help='input directory with mfsf output data already placed in it')
-	parser.add_argument('--rframes', help='list of global reference frames. Provide as list of integers without space (e.g. 1,2,3,4)', type = str)
-	parser.add_argument('--iframes', help='list of intermediate iframes. Provide as list of integers without space (e.g. 1,2,3,4)', type = str)
-
- 	cmd = './continue_mesh.py %s %s %s --res_dir %s --rframes %s --iframes %s'
+	#May not need to modify...
+	dr = args.res_dir + '/' + args.name
+ 	cmd = './continue_mesh.py %s --rframes %s --iframes %s'%(dr, refframes, iframes)
  	os.system(cmd)
 
-	#Load MS segmenting results for each reference frame
-	#u_s = np.load(path_in)
-
+ 	##Done and done.............................................................................
 
 if __name__ == '__main__':
 	#name = '20170219'
