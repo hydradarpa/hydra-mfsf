@@ -20,6 +20,7 @@ function stats = computestats(est_tracks, real_tracks, assign)
 
 	%Compare each matched track
 	for idx = 1:nRT
+		idx
 		tr_gr = real_tracks(idx-1);
 		tr_est = est_tracks(true_in_est(idx)-1);
 		if length(tr_est) > 0
@@ -46,7 +47,7 @@ function stats = computestats(est_tracks, real_tracks, assign)
 				stats.rms(end+1) = 0;
 				stats.prop_lessthanthr(end+1) = 0;
 				stats.matched(end+1) = 0;
-				stats.lifetimes(end+1,:) = 0;
+				stats.lifetimes(end+1,:) = [0,0];
 				stats.minlens(end+1) = 0;
 			end
 		else 
@@ -55,7 +56,7 @@ function stats = computestats(est_tracks, real_tracks, assign)
 			stats.rms(end+1) = 0;
 			stats.prop_lessthanthr(end+1) = 0;
 			stats.matched(end+1) = 0;
-			stats.lifetimes(end+1,:) = 0;
+			stats.lifetimes(end+1,:) = [0,0];
 			stats.minlens(end+1) = 0;
 		end
 	end 
