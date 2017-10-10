@@ -15,16 +15,17 @@ def main(args):
 	Ben Lansdell
 	5/25/2017
 	"""
+
 	#Test code:
 	class Args:
 		pass
 	args = Args()
 	#Format: ID, frame, x, y
-	#args.pts = './tracks/20160412/20160412_dupreannotation_stk0001.csv'
-	#args.output = './tracks/20160412/20160412_dupreannotation_stk0001_dewarp.csv'
+	args.pts = './tracks/20160412/20160412_dupreannotation_stk0001.csv'
+	args.output = './tracks/20160412/20160412_dupreannotation_stk0001_dewarp.csv'
 
-	args.pts = './tracks/20160412/detections.csv'
-	args.output = './tracks/20160412/detections_.csv'
+	#args.pts = './tracks/20160412/detections.csv'
+	#args.output = './tracks/20160412/detections_dewarp.csv'
 
 	args.name = 'stack0001_nref100_nframe250'
 	args.mfsf_dir = './mfsf_output'
